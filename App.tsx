@@ -15,7 +15,8 @@ import Projects from './components/Projects';
 import WorkspaceManager from './components/Workspace';
 import StreekxAssistant from './components/StreekxAssistant'; 
 import Settings from './components/Settings';
-import { FeedbackScreen, DiscoveryScreen, HistoryScreen, EditProfileScreen } from './components/FeatureScreens';
+import History from './components/History'; // NEW IMPORT
+import { FeedbackScreen, DiscoveryScreen, EditProfileScreen } from './components/FeatureScreens';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -70,6 +71,35 @@ const App: React.FC = () => {
     if (storedWorkspaces) setWorkspaces(JSON.parse(storedWorkspaces));
   }, []);
 
+  // --- REAL-TIME SUBSCRIPTIONS ---
+  useEffect(() => {
+      if (!user || user.id.startsWith('local_')) return;
+
+      // 1. Subscribe to Projects
+      const projectChannel = supabase
+        .channel('public:projects')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${user.id}` }, (payload) => {
+             // Reload projects when any change happens
+             db.loadProjects(user.id).then(setProjects);
+        })
+        .subscribe();
+
+      // 2. Subscribe to Sessions
+      const sessionChannel = supabase
+        .channel('public:sessions')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `user_id=eq.${user.id}` }, (payload) => {
+             // Reload sessions when new sessions created or updated
+             db.loadSessions(user.id).then(setSessions);
+        })
+        .subscribe();
+
+      return () => {
+          supabase.removeChannel(projectChannel);
+          supabase.removeChannel(sessionChannel);
+      };
+  }, [user]);
+
+
   const loadLocalData = () => {
       const storedSessions = localStorage.getItem('streekx_sessions');
       if (storedSessions) setSessions(JSON.parse(storedSessions));
@@ -78,18 +108,14 @@ const App: React.FC = () => {
   };
 
   const loadCloudData = async (userId: string) => {
-      // Try to load from Supabase
       try {
           const cloudProjects = await db.loadProjects(userId);
           const cloudSessions = await db.loadSessions(userId);
           
-          if (cloudProjects.length > 0 || cloudSessions.length > 0) {
-              setProjects(cloudProjects);
-              setSessions(cloudSessions);
-          } else {
-              // If cloud empty, fall back to local (migration scenario)
-              loadLocalData();
-          }
+          // Even if empty, we trust cloud for logged in user (unless it's a first sync)
+          setProjects(cloudProjects);
+          setSessions(cloudSessions);
+          
       } catch (e) {
           console.warn("Could not load cloud data, falling back to local", e);
           loadLocalData();
@@ -97,7 +123,6 @@ const App: React.FC = () => {
   };
 
   // --- PERSISTENCE ---
-  // We now save to BOTH LocalStorage (cache) and Supabase (cloud)
   useEffect(() => {
       localStorage.setItem('streekx_auth_users', JSON.stringify(authUsers));
   }, [authUsers]);
@@ -139,13 +164,11 @@ const App: React.FC = () => {
   };
 
   const handleLogin = async (streekxId: string, password: string) => {
-    // We let errors bubble up to the Auth component so they can be displayed in the UI
     const userData = await authService.signIn(streekxId, password);
     handleAuthSuccess(userData);
   };
 
   const handleSignup = async (data: any) => {
-    // We let errors bubble up to the Auth component
     const userData = await authService.signUp(data);
     handleAuthSuccess(userData);
   };
@@ -165,7 +188,7 @@ const App: React.FC = () => {
     } else {
         setUser(null);
         localStorage.removeItem('streekx_active_user');
-        setSessions([]); // Clear data from view on logout
+        setSessions([]); 
         setProjects([]);
         setScreen('INTRO');
     }
@@ -213,6 +236,7 @@ const App: React.FC = () => {
       projectId: projectContextId || activeProjectId || undefined 
     };
     
+    // Optimistic Update
     setSessions(prev => [newSession, ...prev]);
     if (user) db.saveSession(newSession, user.id); // SYNC
 
@@ -224,7 +248,6 @@ const App: React.FC = () => {
   const updateSessionMessages = (sessionId: string, messages: ChatMessage[]) => {
     setSessions(prev => {
         const updated = prev.map(s => s.id === sessionId ? { ...s, messages } : s);
-        // Find the specific session to sync
         const sess = updated.find(s => s.id === sessionId);
         if (user && sess) db.saveSession(sess, user.id); // SYNC
         return updated;
@@ -239,10 +262,21 @@ const App: React.FC = () => {
   const clearHistory = () => {
       if (window.confirm("Are you sure you want to clear all history? This cannot be undone.")) {
           setSessions([]);
-          // Note: Bulk delete not implemented in db helper for safety, 
-          // but we can just clear local and let the user delete manually or add bulk endpoint.
-          // For now, this clears UI state.
       }
+  };
+
+  // --- NEW: MOVE SESSION TO PROJECT ---
+  const handleMoveSessionToProject = (sessionId: string, projectId: string) => {
+      setSessions(prev => {
+          const updated = prev.map(s => s.id === sessionId ? { ...s, projectId } : s);
+          const sess = updated.find(s => s.id === sessionId);
+          if (user && sess) {
+              // Save with new Project ID to Supabase
+              db.saveSession(sess, user.id);
+          }
+          return updated;
+      });
+      // Optionally notify user via a toast, but keeping it smooth for now
   };
 
   const addProject = (project: Project) => {
@@ -371,7 +405,19 @@ const App: React.FC = () => {
       case 'DISCOVERY':
         return <DiscoveryScreen onBack={() => setScreen('HOME')} onSearch={(q) => startSearch(q)} />;
       case 'HISTORY':
-        return <HistoryScreen sessions={sessions} onOpenSession={(id) => { setCurrentSessionId(id); setInitialQuery(''); setScreen('SEARCH'); }} onDeleteSession={deleteSession} onClearAll={clearHistory} onBack={() => setScreen('PROFILE')} />;
+        return (
+            <History 
+                sessions={sessions} 
+                projects={projects}
+                workspaces={workspaces}
+                onOpenSession={(id) => { setCurrentSessionId(id); setInitialQuery(''); setScreen('SEARCH'); }} 
+                onDeleteSession={deleteSession} 
+                onAddToProject={handleMoveSessionToProject}
+                onClearAll={clearHistory} 
+                onBack={() => setScreen('PROFILE')} 
+                onNavigateToProjects={() => setScreen('PROJECTS')}
+            />
+        );
       case 'NOTIFICATIONS':
         return <Notifications onBack={() => setScreen('HOME')} />;
       default:

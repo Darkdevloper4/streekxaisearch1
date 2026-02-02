@@ -122,20 +122,20 @@ export default function WorkspaceManager({ workspaces, onAdd, onSetActive, onBac
 // --- SUB-COMPONENT: DETAIL (TEAM MANAGEMENT) ---
 const WorkspaceDetail = ({ workspace, onBack }: { workspace: Workspace, onBack: () => void }) => {
     const [activeTab, setActiveTab] = useState<'MEMBERS' | 'SETTINGS'>('MEMBERS');
-    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteId, setInviteId] = useState('');
     const [inviteStatus, setInviteStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE');
     const [members, setMembers] = useState([
-        { id: '1', email: 'you@streekx.ai', role: 'Owner', status: 'Active' },
-        { id: '2', email: 'alex@streekx.ai', role: 'Member', status: 'Active' }
+        { id: '1', streekx_id: 'you', role: 'Owner', status: 'Active' },
+        { id: '2', streekx_id: 'alex_tech', role: 'Member', status: 'Active' }
     ]);
 
     const handleInvite = () => {
-        if (!inviteEmail) return;
+        if (!inviteId) return;
         setInviteStatus('SENDING');
         setTimeout(() => {
-            setMembers(prev => [...prev, { id: crypto.randomUUID(), email: inviteEmail, role: 'Member', status: 'Pending' }]);
+            setMembers(prev => [...prev, { id: crypto.randomUUID(), streekx_id: inviteId, role: 'Member', status: 'Pending' }]);
             setInviteStatus('SENT');
-            setInviteEmail('');
+            setInviteId('');
             setTimeout(() => setInviteStatus('IDLE'), 3000);
         }, 1500);
     };
@@ -183,14 +183,14 @@ const WorkspaceDetail = ({ workspace, onBack }: { workspace: Workspace, onBack: 
                             <h3 className="font-bold text-gray-300 text-sm mb-3">Invite Team Member</h3>
                             <div className="flex gap-2">
                                 <input 
-                                    value={inviteEmail}
-                                    onChange={e => setInviteEmail(e.target.value)}
-                                    placeholder="Enter email address" 
+                                    value={inviteId}
+                                    onChange={e => setInviteId(e.target.value)}
+                                    placeholder="Enter StreekX ID" 
                                     className="flex-1 bg-[#000000] rounded-xl px-4 py-3 text-sm outline-none border border-[#2c2c2e] focus:border-streekx-primary transition-colors text-white"
                                 />
                                 <button 
                                     onClick={handleInvite}
-                                    disabled={inviteStatus !== 'IDLE' || !inviteEmail}
+                                    disabled={inviteStatus !== 'IDLE' || !inviteId}
                                     className={`px-4 py-2 rounded-xl text-sm font-bold text-black transition-all ${inviteStatus === 'SENT' ? 'bg-green-500' : 'bg-white hover:bg-gray-200'}`}
                                 >
                                     {inviteStatus === 'IDLE' ? 'Invite' : (inviteStatus === 'SENDING' ? '...' : 'Sent!')}
@@ -204,11 +204,11 @@ const WorkspaceDetail = ({ workspace, onBack }: { workspace: Workspace, onBack: 
                                  {members.map(m => (
                                      <div key={m.id} className="flex items-center justify-between p-3 bg-[#1c1c1e] rounded-xl border border-[#2c2c2e]">
                                          <div className="flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                                                 {m.email[0].toUpperCase()}
+                                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white uppercase">
+                                                 {m.streekx_id[0]}
                                              </div>
                                              <div>
-                                                 <div className="text-sm font-bold text-gray-200">{m.email}</div>
+                                                 <div className="text-sm font-bold text-gray-200">{m.streekx_id}</div>
                                                  <div className="text-[10px] text-gray-500">{m.role}</div>
                                              </div>
                                          </div>
