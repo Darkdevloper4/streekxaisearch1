@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>STREEKX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Nunito', 'sans-serif'],
+            },
+            colors: {
+              streekx: {
+                bg: '#000000',
+                card: '#1c1c1e', 
+                border: '#2c2c2e',
+                primary: '#8d6e63', 
+                primaryDark: '#6d4c41',
+                text: '#ffffff',
+                subtext: '#a1a1aa',
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.3s ease-out',
+              'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              'slide-right': 'slideRight 0.3s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              slideRight: {
+                '0%': { transform: 'translateX(-100%)' },
+                '100%': { transform: 'translateX(0)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        -webkit-tap-highlight-color: transparent;
+        background-color: #000000;
+        color: #ffffff;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.93.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

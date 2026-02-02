@@ -1,0 +1,8 @@
+{
+  "name": "STREEKX",
+  "description": "A premium, mobile-first AI search engine with a cute, modern aesthetic. Features real-time AI search, workspace management, and a custom StreekX ID authentication system.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
