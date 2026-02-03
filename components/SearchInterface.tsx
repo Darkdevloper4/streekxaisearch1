@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatMessage, SearchSession, Attachment, Project, SearchResult } from '../types';
+import { ChatMessage, SearchSession, Attachment, Project, SearchResult, SearchMode, SourceFlags } from '../types';
 import { generateSmartResponse } from '../services/gemini';
 
 interface SearchProps {
@@ -9,21 +9,46 @@ interface SearchProps {
   onBack: () => void;
   onUpdateMessages: (id: string, msgs: ChatMessage[]) => void;
   initialQuery: string;
+  initialAttachments?: Attachment[];
+  initialMode?: SearchMode;
+  initialSourceFlags?: SourceFlags;
   activeProject?: Project; 
+  onOpenAssistant: () => void;
 }
 
-export default function SearchInterface({ sessionId, initialSessions, onBack, onUpdateMessages, initialQuery, activeProject }: SearchProps) {
+export default function SearchInterface({ 
+    sessionId, 
+    initialSessions, 
+    onBack, 
+    onUpdateMessages, 
+    initialQuery, 
+    initialAttachments = [],
+    initialMode = 'Standard',
+    initialSourceFlags,
+    activeProject, 
+    onOpenAssistant 
+}: SearchProps) {
+  
   const session = initialSessions.find(s => s.id === sessionId);
+  
+  // Initialize state with props
   const [messages, setMessages] = useState<ChatMessage[]>(session ? session.messages : []);
   const [input, setInput] = useState('');
   
-  // State for Perplexity-like UX
+  // State for UX
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<string>(''); // "Searching...", "Reading..."
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [expandedSourceMsgId, setExpandedSourceMsgId] = useState<number | null>(null);
+
+  // Search Context State
+  const [searchMode, setSearchMode] = useState<SearchMode>(initialMode);
+  const [sourceFlags, setSourceFlags] = useState<SourceFlags | undefined>(initialSourceFlags);
+  const [showModeSelector, setShowModeSelector] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasExecutedInitial = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -34,13 +59,17 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
 
   // Handle Initial Query Execution
   useEffect(() => {
-    if (initialQuery && !hasExecutedInitial.current && messages.length === 1 && messages[0].role === 'user') {
-        hasExecutedInitial.current = true;
-        executeSearch(initialQuery);
+    if (initialQuery && !hasExecutedInitial.current) {
+        // Check if messages already have content (from session restore) or if this is fresh
+        if (messages.length === 1 && messages[0].role === 'user') {
+            hasExecutedInitial.current = true;
+            // Execute using initial params
+            executeSearch(initialQuery, initialAttachments);
+        }
     }
   }, [initialQuery]);
 
-  const executeSearch = async (queryText: string) => {
+  const executeSearch = async (queryText: string, currentAttachments: Attachment[] = []) => {
     setIsStreaming(true);
     setCurrentStatus("Initializing...");
 
@@ -89,7 +118,10 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
                     return newMsgs;
                 });
             },
-            activeProject?.ai_prompt
+            activeProject?.ai_prompt,
+            searchMode, // Use current search mode
+            sourceFlags, // Use current source flags
+            currentAttachments // Pass images if any
         );
     } catch (e) {
         console.error("Search failed", e);
@@ -124,20 +156,39 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
     });
 
     const txt = input;
+    const atts = [...attachments];
     setInput('');
     setAttachments([]);
-    executeSearch(txt);
+    executeSearch(txt, atts);
   };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (ev.target?.result) {
+                const newAtt: Attachment = {
+                    id: crypto.randomUUID(),
+                    type: file.type.startsWith('image') ? 'image' : 'file',
+                    url: ev.target.result as string,
+                    name: file.name
+                };
+                setAttachments(prev => [...prev, newAtt]);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
+  const hasContent = input.trim().length > 0 || attachments.length > 0;
 
   // --- RENDERERS ---
 
   // Renders the [1] citations as clickable links
   const renderMarkdownWithCitations = (text: string, sources: SearchResult[] = []) => {
       if (!text) return null;
-      
-      // Split by citation markers [1], [2], etc.
       const parts = text.split(/(\[\d+\])/g);
-      
       return parts.map((part, i) => {
           const match = part.match(/\[(\d+)\]/);
           if (match) {
@@ -158,19 +209,21 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
                   );
               }
           }
-          // Basic Markdown formatting (Simplified)
           return <span key={i} dangerouslySetInnerHTML={{ __html: part.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>') }} />;
       });
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#000000] text-white font-sans animate-fade-in relative">
+    <div className="flex flex-col h-full bg-[#000000] text-white font-sans animate-fade-in relative" onClick={() => setShowModeSelector(false)}>
         {/* Top Bar */}
         <div className="flex items-center justify-between px-4 py-4 sticky top-0 z-20 bg-[#000000]/90 backdrop-blur-md border-b border-[#1c1c1e]">
             <button onClick={onBack} className="w-10 h-10 rounded-full bg-[#1c1c1e] flex items-center justify-center text-gray-400 hover:text-white transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
-            <span className="font-bold text-sm tracking-widest text-streekx-primary uppercase opacity-80">StreekX AI</span>
+            <div className="flex flex-col items-center">
+                 <span className="font-bold text-sm tracking-widest text-streekx-primary uppercase opacity-80">StreekX AI</span>
+                 <span className="text-[10px] text-gray-500 font-bold">{searchMode} Mode</span>
+            </div>
             <div className="w-10"></div>
         </div>
 
@@ -214,32 +267,39 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
                      {msg.role === 'model' && (
                          <div className="w-full max-w-full animate-fade-in">
                             
-                            {/* 1. SOURCES ROW (Perplexity Style) */}
+                            {/* COLLAPSIBLE SOURCES BUTTON */}
                             {msg.sources && msg.sources.length > 0 && (
-                                <div className="mb-6">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
-                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Sources</span>
-                                    </div>
-                                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                                        {msg.sources.map((source, i) => (
-                                            <a 
-                                                key={i} 
-                                                href={source.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex-shrink-0 w-40 p-3 bg-[#1c1c1e] rounded-xl border border-[#2c2c2e] hover:border-gray-600 transition-all group flex flex-col justify-between h-24"
-                                            >
-                                                <div className="text-[11px] font-bold text-gray-300 line-clamp-2 leading-snug group-hover:text-streekx-primary transition-colors">
-                                                    {source.title}
-                                                </div>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    {source.favicon && <img src={source.favicon} className="w-4 h-4 rounded-full" onError={(e) => (e.currentTarget.style.display = 'none')} />}
-                                                    <div className="text-[10px] text-gray-500 truncate">{source.source}</div>
-                                                </div>
-                                            </a>
-                                        ))}
-                                    </div>
+                                <div className="mb-4">
+                                    <button 
+                                        onClick={() => setExpandedSourceMsgId(expandedSourceMsgId === msg.timestamp ? null : msg.timestamp)}
+                                        className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-streekx-primary transition-colors bg-[#1c1c1e] px-3 py-1.5 rounded-full border border-[#2c2c2e]"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                                        {expandedSourceMsgId === msg.timestamp ? 'Hide Sources' : `View ${msg.sources.length} Sources`}
+                                    </button>
+                                    
+                                    {/* Sources List (Conditional) */}
+                                    {expandedSourceMsgId === msg.timestamp && (
+                                        <div className="flex gap-3 overflow-x-auto pb-2 mt-3 no-scrollbar animate-fade-in">
+                                            {msg.sources.map((source, i) => (
+                                                <a 
+                                                    key={i} 
+                                                    href={source.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-shrink-0 w-40 p-3 bg-[#1c1c1e] rounded-xl border border-[#2c2c2e] hover:border-gray-600 transition-all group flex flex-col justify-between h-24"
+                                                >
+                                                    <div className="text-[11px] font-bold text-gray-300 line-clamp-2 leading-snug group-hover:text-streekx-primary transition-colors">
+                                                        {source.title}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        {source.favicon && <img src={source.favicon} className="w-4 h-4 rounded-full" onError={(e) => (e.currentTarget.style.display = 'none')} />}
+                                                        <div className="text-[10px] text-gray-500 truncate">{source.source}</div>
+                                                    </div>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -262,6 +322,7 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-sm font-bold text-white">StreekX Answer</span>
                                         {activeProject && <span className="text-[10px] bg-gray-800 px-1.5 py-0.5 rounded text-gray-400">Context-Aware</span>}
+                                        {searchMode === 'Pro' && <span className="text-[10px] bg-streekx-primary text-white px-1.5 py-0.5 rounded font-bold">PRO</span>}
                                     </div>
                                     <div className="text-[16px] leading-7 text-gray-300 font-normal markdown-content">
                                         {msg.content ? (
@@ -272,20 +333,6 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
                                     </div>
                                 </div>
                             </div>
-
-                            {/* 4. ACTION BUTTONS */}
-                            {!isStreaming && msg.content && (
-                                <div className="flex gap-4 mt-6 ml-12 border-t border-[#2c2c2e] pt-4">
-                                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1c1c1e] text-xs font-bold text-gray-400 hover:text-white hover:bg-[#2c2c2e] transition-colors">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                        Copy
-                                    </button>
-                                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1c1c1e] text-xs font-bold text-gray-400 hover:text-white hover:bg-[#2c2c2e] transition-colors">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                                        Share
-                                    </button>
-                                </div>
-                            )}
                          </div>
                      )}
                  </div>
@@ -295,10 +342,51 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
 
         {/* Input Bar */}
         <div className="p-4 bg-[#000000]">
-            <div className="bg-[#1c1c1e] rounded-[2rem] border border-[#2c2c2e] focus-within:border-gray-500 transition-colors flex items-center p-2 relative">
-                <button className="p-3 text-gray-500 hover:text-white rounded-full transition-colors">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+             {/* Mode Selector Popover (Bottom Up in Chat) */}
+             {showModeSelector && (
+                 <div className="absolute bottom-20 left-4 bg-[#1c1c1e] rounded-2xl border border-[#2c2c2e] shadow-2xl p-2 w-48 animate-slide-up z-30">
+                     {['Standard', 'Pro', 'Research', 'Labs'].map((m) => (
+                         <button 
+                            key={m} 
+                            onClick={() => { setSearchMode(m as SearchMode); setShowModeSelector(false); }}
+                            className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex justify-between items-center ${searchMode === m ? 'bg-streekx-primary text-white' : 'text-gray-400 hover:bg-[#2c2c2e] hover:text-white'}`}
+                         >
+                             {m}
+                             {searchMode === m && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>}
+                         </button>
+                     ))}
+                 </div>
+             )}
+            
+            {/* Attachments Preview above input */}
+            {attachments.length > 0 && (
+                <div className="flex gap-2 mb-2 px-2 overflow-x-auto pb-2">
+                    {attachments.map(att => (
+                        <div key={att.id} className="relative group flex-shrink-0 animate-fade-in">
+                             {att.type === 'image' ? (
+                                <img src={att.url} className="w-12 h-12 object-cover rounded-lg border border-gray-600" />
+                            ) : (
+                                <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-600">📄</div>
+                            )}
+                            <button onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))} className="absolute -top-1 -right-1 bg-gray-700 rounded-full w-4 h-4 flex items-center justify-center text-[10px] text-white">✕</button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="bg-[#1c1c1e] rounded-[2rem] border border-[#2c2c2e] focus-within:border-gray-500 transition-colors flex items-center p-2 relative shadow-lg">
+                
+                {/* Mode Icon (Left) */}
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setShowModeSelector(!showModeSelector); }} 
+                    className="p-3 text-gray-500 hover:text-white rounded-full transition-colors"
+                >
+                     {searchMode === 'Pro' ? <span className="text-[10px] bg-streekx-primary text-white px-1 rounded font-bold">PRO</span> : 
+                      searchMode === 'Research' ? '⚡️' :
+                      searchMode === 'Labs' ? '🧪' : 
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>}
                 </button>
+
                 <input 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -306,13 +394,30 @@ export default function SearchInterface({ sessionId, initialSessions, onBack, on
                     placeholder="Ask follow-up..." 
                     className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 ml-2"
                 />
-                <button 
-                    onClick={() => handleSend()}
-                    disabled={!input.trim() || isStreaming}
-                    className={`p-2 rounded-full transition-all ${input.trim() ? 'bg-streekx-primary text-white' : 'bg-[#2c2c2e] text-gray-500'}`}
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+
+                {/* Attach Icon (Right) */}
+                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 hover:text-streekx-primary hover:bg-streekx-primary/10 rounded-full transition-all mr-1">
+                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                 </button>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
+
+                {/* DYNAMIC ACTION BUTTON */}
+                {hasContent ? (
+                    <button 
+                        onClick={(e) => handleSend(e)}
+                        disabled={isStreaming}
+                        className="p-2.5 rounded-full transition-all bg-streekx-primary text-white hover:bg-streekx-primaryDark animate-fade-in"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                    </button>
+                ) : (
+                    <button 
+                        onClick={onOpenAssistant} 
+                        className="p-2.5 text-gray-500 hover:text-streekx-primary hover:bg-streekx-primary/10 rounded-full transition-all animate-fade-in"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </button>
+                )}
             </div>
         </div>
     </div>

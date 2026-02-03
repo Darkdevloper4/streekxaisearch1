@@ -1,66 +1,12 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { ChatMessage, SearchResult } from "../types";
+import { ChatMessage, SearchResult, SearchMode, SourceFlags, Attachment } from "../types";
 import { performWebSearch } from "./search";
 
 // --- CONFIG ---
-// We read from localStorage to see which model the user selected in Settings
 const getSettings = () => {
     const saved = localStorage.getItem('streekx_settings');
     return saved ? JSON.parse(saved) : {};
-};
-
-// --- GROQ CLIENT (Simulated via Fetch to avoid adding another heavy SDK dependency) ---
-const callGroqAPI = async (messages: any[], systemPrompt: string, onChunk: (text: string) => void) => {
-    // NOTE: In a real app, you would use process.env.GROQ_API_KEY. 
-    // Since we don't have it, we will throw to trigger the graceful fallback, 
-    // OR if you have a proxy, call it here.
-    // For this fully functional demo, we assume the user might not have a Groq key, so we default to Gemini logic 
-    // but structure this to work if a key was provided.
-    
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) throw new Error("Groq API Key missing");
-
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            messages: [
-                { role: "system", content: systemPrompt },
-                ...messages
-            ],
-            model: "mixtral-8x7b-32768",
-            stream: true
-        })
-    });
-
-    if (!response.body) throw new Error("No response body");
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-        for (const line of lines) {
-            if (line.trim().startsWith("data: ")) {
-                const jsonStr = line.trim().substring(6);
-                if (jsonStr === "[DONE]") break;
-                try {
-                    const json = JSON.parse(jsonStr);
-                    const content = json.choices[0]?.delta?.content || "";
-                    buffer += content;
-                    onChunk(buffer);
-                } catch (e) {}
-            }
-        }
-    }
-    return buffer;
 };
 
 // --- GEMINI CLIENT ---
@@ -70,6 +16,29 @@ const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+// --- HELPER: CONVERT ATTACHMENT TO INLINE DATA ---
+const processAttachments = (attachments?: Attachment[]) => {
+    if (!attachments || attachments.length === 0) return [];
+    
+    return attachments
+        .filter(att => att.type === 'image' && att.url.startsWith('data:'))
+        .map(att => {
+            // Extract base64 and mime type from data URL
+            // Format: data:image/png;base64,.....
+            const matches = att.url.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                return {
+                    inlineData: {
+                        mimeType: matches[1],
+                        data: matches[2]
+                    }
+                };
+            }
+            return null;
+        })
+        .filter(Boolean); // Remove nulls
+};
+
 // --- MAIN AI ORCHESTRATOR ---
 export const generateSmartResponse = async (
   query: string,
@@ -77,91 +46,112 @@ export const generateSmartResponse = async (
   onStatusUpdate: (status: string) => void,
   onSourcesFound: (sources: SearchResult[]) => void,
   onChunk: (text: string) => void,
-  projectContext?: string
+  projectContext?: string,
+  searchMode: SearchMode = 'Standard',
+  sourceFlags?: SourceFlags,
+  currentAttachments?: Attachment[]
 ): Promise<string> => {
     const settings = getSettings();
-    const useGroq = settings.aiModel === 'Groq LPU'; // Example setting check
     
-    // 1. SEARCH STEP
-    onStatusUpdate("Searching the web...");
+    // 1. SEARCH STEP (Unless in Labs mode with no internet flag, but here we assume always search for now)
+    onStatusUpdate(searchMode === 'Research' ? "Conducting deep research..." : "Searching the web...");
     
-    // Check if query implies real-time info (simple heuristic) or if we just default to always search (Perplexity style)
-    // For StreekX, we always search to provide grounding.
-    const searchResults = await performWebSearch(query);
+    // Pass flags to search service
+    const searchResults = await performWebSearch(query, sourceFlags);
     onSourcesFound(searchResults);
 
     // 2. REASONING / PROMPT ENGINEERING STEP
     onStatusUpdate("Reading sources...");
-    await new Promise(r => setTimeout(r, 600)); // UX pause to let user see sources
+    await new Promise(r => setTimeout(r, 600)); 
     
-    onStatusUpdate("Generating answer...");
+    onStatusUpdate(searchMode === 'Pro' ? "Reasoning with Pro model..." : "Generating answer...");
 
     // Construct Context Blob
     const sourcesText = searchResults.map((s, i) => `[${i + 1}] Title: ${s.title}\nURL: ${s.url}\nContent: ${s.snippet}`).join("\n\n");
     
     const today = new Date().toDateString();
     
+    // Adjust System Prompt based on Mode
+    let modeInstruction = "";
+    switch (searchMode) {
+        case 'Pro':
+            modeInstruction = "You are in PRO MODE. Provide a highly detailed, extensive answer. Use advanced reasoning. Break down complex topics.";
+            break;
+        case 'Research':
+            modeInstruction = "You are in RESEARCH MODE. Focus on academic, factual, and deep-dive information. Prioritize consensus and data. Output should be structured like a research summary.";
+            break;
+        case 'Labs':
+            modeInstruction = "You are in LABS MODE. Be creative, experimental, and concise. Focus on code generation or novel ideas if applicable.";
+            break;
+        default:
+            modeInstruction = "Provide a direct, helpful, and professional answer.";
+    }
+
     const systemPrompt = `You are StreekX, a real-time AI search engine. 
     Current Date: ${today}.
     
-    Your goal is to answer the user's query comprehensively using the provided Search Results.
+    ${modeInstruction}
+    
+    Your goal is to answer the user's query comprehensively using the provided Search Results and any images provided.
     
     RULES:
     1. **Citations**: You MUST cite your sources inline using brackets like [1], [2]. 
        - Every factual claim must be backed by a citation from the provided context.
        - Place citations immediately after the sentence or clause they support.
-    2. **Tone**: Professional, direct, and concise. Do not fluff. Be like Perplexity.ai.
+    2. **Tone**: Professional, direct, and concise (unless Pro Mode). Do not fluff.
     3. **Format**: Use Markdown. Use bold for key entities. Use lists where appropriate.
-    4. **No Hallucination**: If the search results do not contain the answer, admit it or provide a best guess while stating the limitation.
+    4. **No Hallucination**: If the search results do not contain the answer, admit it.
     5. **Project Context**: ${projectContext || "None"}
     
     SEARCH RESULTS TO USE:
     ${sourcesText}
     `;
 
-    const messageHistory = history.map(h => ({
-        role: h.role,
-        content: h.content
-    }));
+    // Process History
+    const historyParts = history.map(h => {
+        const parts: any[] = [{ text: h.content }];
+        const attParts = processAttachments(h.attachments);
+        if (attParts.length > 0) parts.push(...attParts);
+        return {
+            role: h.role,
+            parts: parts
+        };
+    });
 
-    // Add current query with explicit instruction
-    const fullPrompt = `User Query: ${query}\n\nBased on the search results provided in the system prompt, answer this query.`;
+    // Process Current User Message
+    const currentParts: any[] = [{ 
+        text: `User Query: ${query}\n\nBased on the search results provided in the system prompt, answer this query.` 
+    }];
+    const currentAttParts = processAttachments(currentAttachments);
+    if (currentAttParts.length > 0) {
+        currentParts.unshift(...currentAttParts); // Add images before text
+    }
 
     try {
-        // 3. GENERATION STEP
-        if (useGroq) {
-            try {
-                return await callGroqAPI([...messageHistory, { role: 'user', content: fullPrompt }], systemPrompt, onChunk);
-            } catch (e) {
-                console.warn("Groq failed, falling back to Gemini", e);
-                // Fallthrough to Gemini
-            }
-        }
-
         const ai = getGeminiClient();
         if (!ai) {
-             // Ultimate Fallback if NO API KEYS are present at all
             const mockText = "I see you haven't configured an API key. Normally, I would have read those " + searchResults.length + " sources and synthesized an answer. \n\nHere is a simulated summary: Based on the search results from " + (searchResults[0]?.source || "the web") + ", the answer to '" + query + "' involves complex factors described in the provided links.";
-            let buffer = "";
-            for(const word of mockText.split(" ")) {
-                buffer += word + " ";
-                onChunk(buffer);
-                await new Promise(r => setTimeout(r, 50));
-            }
+            onChunk(mockText);
             return mockText;
         }
 
-        // Using Gemini 1.5 Flash or Pro via the updated SDK
-        // Note: We use the 'systemInstruction' config for the persona + sources
+        // Determine Model based on Mode
+        // Pro/Research -> Pro Model (gemini-3-pro-preview if available, falling back to flash for speed in demo)
+        // Standard -> Flash
+        // Actually, user instructions say: 'gemini-3-pro-preview' for complex text tasks.
+        const modelName = (searchMode === 'Pro' || searchMode === 'Research') 
+            ? 'gemini-3-pro-preview' 
+            : 'gemini-3-flash-preview';
+
         const responseStream = await ai.models.generateContentStream({
-            model: 'gemini-2.5-flash', // Using latest flash for speed
+            model: modelName, 
             contents: [
-                ...messageHistory.map(m => ({ role: m.role, parts: [{ text: m.content }] })), // History
-                { role: 'user', parts: [{ text: fullPrompt }] } // Current
+                ...historyParts,
+                { role: 'user', parts: currentParts }
             ],
             config: {
                 systemInstruction: systemPrompt,
-                temperature: 0.7
+                temperature: searchMode === 'Labs' ? 0.9 : 0.7
             }
         });
 

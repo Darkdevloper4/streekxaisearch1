@@ -1,8 +1,7 @@
 
-import { SearchResult } from "../types";
+import { SearchResult, SourceFlags } from "../types";
 
 // Helper to generate consistent fallback data when scraping fails
-// This ensures the AI always has some context to work with, even if the proxy is down.
 const getFallbackResults = (query: string): SearchResult[] => {
     return [
         {
@@ -36,13 +35,27 @@ const getFallbackResults = (query: string): SearchResult[] => {
     ];
 };
 
-export const performWebSearch = async (query: string): Promise<SearchResult[]> => {
+export const performWebSearch = async (query: string, sourceFlags?: SourceFlags): Promise<SearchResult[]> => {
     try {
+        let finalQuery = query;
+
+        // Apply Source Filters via search operators
+        if (sourceFlags) {
+            const operators = [];
+            if (sourceFlags.academic) operators.push('site:.edu OR site:arxiv.org OR site:scholar.google.com OR site:jstor.org');
+            if (sourceFlags.finance) operators.push('site:bloomberg.com OR site:cnbc.com OR site:finance.yahoo.com OR site:wsj.com');
+            if (sourceFlags.social) operators.push('site:reddit.com OR site:twitter.com OR site:quora.com OR site:news.ycombinator.com');
+            
+            // If specific flags are set, append them. If only 'web' or nothing is set, normal search.
+            if (operators.length > 0) {
+                finalQuery = `${query} (${operators.join(' OR ')})`;
+            }
+        }
+
         // 1. Use DuckDuckGo HTML endpoint
-        const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+        const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(finalQuery)}`;
         
         // 2. Route through AllOrigins (CORS Proxy)
-        // Adding timestamp to prevent aggressive caching
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}&t=${Date.now()}`;
         
         const response = await fetch(proxyUrl);
@@ -66,17 +79,15 @@ export const performWebSearch = async (query: string): Promise<SearchResult[]> =
         const resultElements = doc.querySelectorAll('.result');
 
         resultElements.forEach((el, index) => {
-            if (index >= 6) return; // Limit to top 6 results
+            if (index >= 8) return; // Limit to top 8 results for better context
             
             const titleEl = el.querySelector('.result__title a');
             const snippetEl = el.querySelector('.result__snippet');
             const urlEl = el.querySelector('.result__url');
 
             if (titleEl && snippetEl) {
-                // Extract URL: duckduckgo wraps external links, we try to get the raw one or fallback to href
+                // Extract URL
                 let rawUrl = (urlEl as HTMLElement)?.innerText.trim() || (titleEl as HTMLAnchorElement).href;
-                
-                // Basic cleanup
                 if (rawUrl.startsWith('//')) rawUrl = 'https:' + rawUrl;
 
                 let domain = 'web';
@@ -96,7 +107,7 @@ export const performWebSearch = async (query: string): Promise<SearchResult[]> =
             }
         });
 
-        // Fallback: If scraping fails (DDG bot detection or layout change), return mock data based on query 
+        // Fallback if scraping fails
         if (results.length === 0) {
             console.warn("Search scraping yielded 0 results, using fallback.");
             return getFallbackResults(query);
@@ -106,7 +117,6 @@ export const performWebSearch = async (query: string): Promise<SearchResult[]> =
 
     } catch (error) {
         console.warn("Search API Error (using fallback):", error);
-        // CRITICAL: Return fallback data instead of empty array on network error
         return getFallbackResults(query);
     }
 };

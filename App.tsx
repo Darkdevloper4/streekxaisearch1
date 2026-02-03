@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppState, Screen, UserProfile, WeatherData, ChatMessage, SearchSession, Project, Workspace, Attachment } from './types';
+import { AppState, Screen, UserProfile, WeatherData, ChatMessage, SearchSession, Project, Workspace, Attachment, SearchMode, SourceFlags } from './types';
 import { supabase, authService, db } from './services/supabase';
 import { getWeather } from './services/weather';
 import Home from './components/Home';
@@ -15,8 +15,8 @@ import Projects from './components/Projects';
 import WorkspaceManager from './components/Workspace';
 import StreekxAssistant from './components/StreekxAssistant'; 
 import Settings from './components/Settings';
-import History from './components/History'; // NEW IMPORT
-import { FeedbackScreen, DiscoveryScreen, EditProfileScreen } from './components/FeatureScreens';
+import History from './components/History'; 
+import { FeedbackScreen, DiscoveryScreen } from './components/FeatureScreens';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -36,6 +36,11 @@ const App: React.FC = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null); 
   const [initialQuery, setInitialQuery] = useState('');
+  
+  // Search Context State (Ephemeral for new session creation)
+  const [initialAttachments, setInitialAttachments] = useState<Attachment[]>([]);
+  const [initialMode, setInitialMode] = useState<SearchMode>('Standard');
+  const [initialSourceFlags, setInitialSourceFlags] = useState<SourceFlags | undefined>(undefined);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -221,7 +226,14 @@ const App: React.FC = () => {
   };
 
   // --- DATA OPERATIONS (Wrapped to Sync with DB) ---
-  const startSearch = (query: string, attachments?: Attachment[], projectContextId?: string) => {
+  const startSearch = (
+      query: string, 
+      attachments: Attachment[] = [], 
+      mode: SearchMode = 'Standard', 
+      isIncognito: boolean = false, 
+      sourceFlags?: SourceFlags,
+      projectContextId?: string
+  ) => {
     const newId = crypto.randomUUID();
     const newSession: SearchSession = {
       id: newId,
@@ -231,22 +243,34 @@ const App: React.FC = () => {
           role: 'user', 
           content: query, 
           timestamp: Date.now(),
-          attachments: attachments || [] 
+          attachments: attachments
       }],
-      projectId: projectContextId || activeProjectId || undefined 
+      projectId: projectContextId || activeProjectId || undefined,
+      mode: mode,
+      sourceFlags: sourceFlags
     };
     
-    // Optimistic Update
-    setSessions(prev => [newSession, ...prev]);
-    if (user) db.saveSession(newSession, user.id); // SYNC
+    if (!isIncognito) {
+        // Optimistic Update
+        setSessions(prev => [newSession, ...prev]);
+        if (user) db.saveSession(newSession, user.id); // SYNC
+    }
 
     setCurrentSessionId(newId);
     setInitialQuery(query);
+    setInitialAttachments(attachments);
+    setInitialMode(mode);
+    setInitialSourceFlags(sourceFlags);
+
     setScreen('SEARCH');
   };
 
   const updateSessionMessages = (sessionId: string, messages: ChatMessage[]) => {
     setSessions(prev => {
+        // Don't save if it's an incognito session (not in list)
+        const exists = prev.find(s => s.id === sessionId);
+        if (!exists) return prev;
+
         const updated = prev.map(s => s.id === sessionId ? { ...s, messages } : s);
         const sess = updated.find(s => s.id === sessionId);
         if (user && sess) db.saveSession(sess, user.id); // SYNC
@@ -276,7 +300,6 @@ const App: React.FC = () => {
           }
           return updated;
       });
-      // Optionally notify user via a toast, but keeping it smooth for now
   };
 
   const addProject = (project: Project) => {
@@ -313,7 +336,10 @@ const App: React.FC = () => {
           <Home 
             user={user} 
             weather={weather} 
-            onSearch={(q, att) => { setActiveProjectId(null); startSearch(q, att); }}
+            onSearch={(q, att, mode, incognito, sources) => { 
+                setActiveProjectId(null); 
+                startSearch(q, att, mode, incognito, sources); 
+            }}
             onOpenProfile={() => setScreen('PROFILE')}
             searchHistory={sessions.map(s => s.query)}
             onNavigate={(s) => {
@@ -330,7 +356,11 @@ const App: React.FC = () => {
             onBack={() => activeProjectId ? setScreen('PROJECT_DETAIL') : setScreen('HOME')}
             onUpdateMessages={updateSessionMessages}
             initialQuery={initialQuery}
+            initialAttachments={initialAttachments}
+            initialMode={initialMode}
+            initialSourceFlags={initialSourceFlags}
             activeProject={projects.find(p => p.id === activeProjectId)}
+            onOpenAssistant={() => setShowAssistant(true)}
           />
         );
       case 'PROFILE':
@@ -392,7 +422,12 @@ const App: React.FC = () => {
                 onOpenProject={() => {}}
                 activeProject={project}
                 sessions={sessions.filter(s => s.projectId === project.id)}
-                onNewThread={() => { setInitialQuery(''); setCurrentSessionId(null); setActiveProjectId(project.id); startSearch('', [], project.id); }}
+                onNewThread={() => { 
+                    setInitialQuery(''); 
+                    setCurrentSessionId(null); 
+                    setActiveProjectId(project.id); 
+                    startSearch('', [], 'Standard', false, undefined, project.id); 
+                }}
                 onOpenSession={(id) => { setCurrentSessionId(id); setInitialQuery(''); setScreen('SEARCH'); }}
                 onUpdateProject={updateProject}
              />
@@ -426,7 +461,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-screen bg-black text-white overflow-hidden font-sans relative">
+    <div className="w-full h-[100dvh] bg-gray-50 dark:bg-black text-gray-900 dark:text-white overflow-hidden font-sans relative transition-colors duration-200">
       {renderScreen()}
       {showAssistant && <StreekxAssistant onClose={() => setShowAssistant(false)} />}
     </div>

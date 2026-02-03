@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface SettingsProps {
   user: UserProfile | null;
@@ -19,15 +20,15 @@ const SectionHeader = ({ label }: { label: string }) => (
 );
 
 const SettingRow = ({ label, value, onClick, action, isDestructive = false }: { label: string, value?: string, onClick?: () => void, action?: React.ReactNode, isDestructive?: boolean }) => (
-  <div onClick={onClick} className={`px-4 py-4 flex items-center justify-between transition-colors ${onClick ? 'cursor-pointer active:bg-[#1c1c1e] hover:bg-white/5' : ''}`}>
+  <div onClick={onClick} className={`px-4 py-4 flex items-center justify-between transition-colors ${onClick ? 'cursor-pointer active:bg-gray-200 dark:active:bg-[#1c1c1e] hover:bg-black/5 dark:hover:bg-white/5' : ''}`}>
     <div className="flex flex-col">
-      <span className={`text-[17px] font-medium ${isDestructive ? 'text-red-500' : 'text-white'}`}>{label}</span>
-      {value && <span className="text-[14px] text-gray-400 mt-1 font-medium">{value}</span>}
+      <span className={`text-[17px] font-medium ${isDestructive ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>{label}</span>
+      {value && <span className="text-[14px] text-gray-500 dark:text-gray-400 mt-1 font-medium">{value}</span>}
     </div>
     <div className="flex items-center gap-3">
         {action}
         {onClick && !action && (
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+            <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
         )}
     </div>
   </div>
@@ -36,7 +37,7 @@ const SettingRow = ({ label, value, onClick, action, isDestructive = false }: { 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean, onChange: (v: boolean) => void }) => (
     <button 
         onClick={(e) => { e.stopPropagation(); onChange(!enabled); }} 
-        className={`w-[52px] h-[32px] rounded-full p-1 transition-all duration-300 relative focus:outline-none ${enabled ? 'bg-streekx-primary' : 'bg-[#3a3a3c]'}`}
+        className={`w-[52px] h-[32px] rounded-full p-1 transition-all duration-300 relative focus:outline-none ${enabled ? 'bg-streekx-primary' : 'bg-gray-300 dark:bg-[#3a3a3c]'}`}
     >
         <div className={`w-[24px] h-[24px] bg-white rounded-full shadow-lg transform transition-transform duration-300 ${enabled ? 'translate-x-[20px]' : 'translate-x-0'}`}></div>
     </button>
@@ -44,19 +45,19 @@ const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean, onChange: (v: b
 
 // --- SUB-SCREEN FOR SELECTIONS ---
 const OptionsScreen = ({ title, options, selected, onSelect, onBack }: { title: string, options: string[], selected: string, onSelect: (val: string) => void, onBack: () => void }) => (
-    <div className="h-full bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-200">
-        <div className="flex items-center px-4 py-4 border-b border-[#1c1c1e] bg-[#000000] sticky top-0 z-20">
-            <button onClick={onBack} className="p-2 -ml-2 text-white rounded-full hover:bg-[#1c1c1e] transition-colors">
+    <div className="h-full bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
+        <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-gray-50 dark:bg-[#000000] sticky top-0 z-20">
+            <button onClick={onBack} className="p-2 -ml-2 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
-            <h2 className="ml-3 text-[19px] font-bold text-white tracking-tight">{title}</h2>
+            <h2 className="ml-3 text-[19px] font-bold text-gray-900 dark:text-white tracking-tight">{title}</h2>
         </div>
         <div className="p-4 space-y-2">
             {options.map(opt => (
                 <button 
                     key={opt} 
                     onClick={() => { onSelect(opt); onBack(); }}
-                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${selected === opt ? 'bg-[#1c1c1e] border-streekx-primary text-streekx-primary' : 'bg-transparent border-transparent hover:bg-[#1c1c1e] text-gray-200'}`}
+                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${selected === opt ? 'bg-white dark:bg-[#1c1c1e] border-streekx-primary text-streekx-primary' : 'bg-transparent border-transparent hover:bg-gray-200 dark:hover:bg-[#1c1c1e] text-gray-900 dark:text-gray-200'}`}
                 >
                     <span className="font-bold text-[16px]">{opt}</span>
                     {selected === opt && <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>}
@@ -68,6 +69,8 @@ const OptionsScreen = ({ title, options, selected, onSelect, onBack }: { title: 
 
 // --- MAIN SETTINGS COMPONENT ---
 export default function Settings({ user, onBack, onLogout, onClearHistory, onUpdateUser }: SettingsProps) {
+  const { theme, setTheme } = useTheme();
+
   // --- STATE ---
   const [settings, setSettings] = useState(() => {
      const saved = localStorage.getItem('streekx_settings');
@@ -75,7 +78,7 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
          incognito: false,
          notifications: true,
          dataRetention: true,
-         theme: 'Dark Theme',
+         // theme handled by context now
          imageModel: 'Gemini Imagen 3',
          aiLanguage: 'Automatic',
          speechRecognition: 'System Default',
@@ -94,12 +97,6 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
   // --- PERSISTENCE ---
   useEffect(() => {
       localStorage.setItem('streekx_settings', JSON.stringify(settings));
-      // Real-time effect: Toggle dark class (Demo purposes)
-      if (settings.theme.includes('Dark')) {
-          document.documentElement.classList.add('dark');
-      } else {
-          document.documentElement.classList.remove('dark');
-      }
   }, [settings]);
 
   // --- HANDLERS ---
@@ -121,9 +118,29 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
   const openSubMenu = (id: string, title: string, options: string[], key: string) => {
       setActiveSubMenu({ id, title, options, key });
   };
+  
+  // Theme sub-menu handler wrapper
+  const handleThemeSelect = (val: string) => {
+      const mapped = val === 'Dark Theme' ? 'dark' : val === 'Light Theme' ? 'light' : 'system';
+      setTheme(mapped as any);
+  };
+  
+  const currentThemeLabel = theme === 'dark' ? 'Dark Theme' : theme === 'light' ? 'Light Theme' : 'System Default';
 
   // --- SUB-SCREEN RENDER ---
   if (activeSubMenu) {
+      // Special check for Theme menu to use Context
+      if (activeSubMenu.key === 'theme') {
+          return (
+            <OptionsScreen 
+                title={activeSubMenu.title}
+                options={activeSubMenu.options}
+                selected={currentThemeLabel}
+                onSelect={handleThemeSelect}
+                onBack={() => setActiveSubMenu(null)}
+            />
+          );
+      }
       return (
           <OptionsScreen 
               title={activeSubMenu.title}
@@ -137,32 +154,32 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
 
   // --- MAIN RENDER ---
   return (
-    <div className="h-full bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-200">
+    <div className="h-[100dvh] bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200 transition-colors duration-200">
       
       {/* Header */}
-      <div className="flex items-center px-4 py-4 border-b border-[#1c1c1e] sticky top-0 bg-[#000000] z-20">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 rounded-full hover:text-white hover:bg-[#1c1c1e] transition-colors">
+      <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] sticky top-0 bg-gray-50 dark:bg-[#000000] z-20 flex-shrink-0">
+        <button onClick={onBack} className="p-2 -ml-2 text-gray-500 dark:text-gray-400 rounded-full hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
         </button>
-        <h2 className="ml-3 text-[19px] font-bold text-white tracking-tight">Settings</h2>
+        <h2 className="ml-3 text-[19px] font-bold text-gray-900 dark:text-white tracking-tight">Settings</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-40 no-scrollbar">
         
         {/* ACCOUNT SECTION */}
         <SectionHeader label="Account" />
         
         {isEditingName ? (
-            <div className="px-4 py-4 bg-[#1c1c1e] mx-4 rounded-xl border border-[#2c2c2e] animate-fade-in">
+            <div className="px-4 py-4 bg-white dark:bg-[#1c1c1e] mx-4 rounded-xl border border-gray-200 dark:border-[#2c2c2e] animate-fade-in shadow-sm">
                 <label className="text-xs text-streekx-primary font-bold mb-2 block uppercase tracking-wide">Edit Username</label>
                 <input 
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full bg-black border border-[#2c2c2e] text-white p-3 rounded-xl outline-none focus:border-streekx-primary mb-4 font-bold"
+                    className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-[#2c2c2e] text-gray-900 dark:text-white p-3 rounded-xl outline-none focus:border-streekx-primary mb-4 font-bold"
                     autoFocus
                 />
                 <div className="flex justify-end gap-3">
-                    <button onClick={() => setIsEditingName(false)} className="px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white">Cancel</button>
+                    <button onClick={() => setIsEditingName(false)} className="px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white">Cancel</button>
                     <button onClick={handleSaveName} className="px-4 py-2 rounded-lg bg-streekx-primary text-white text-sm font-bold">Save</button>
                 </div>
             </div>
@@ -179,26 +196,26 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
             value={user?.streekx_id || 'Not signed in'} 
         />
 
-        <div className="px-4 py-4 flex items-center justify-between cursor-pointer" onClick={() => updateSetting('incognito', !settings.incognito)}>
+        <div className="px-4 py-4 flex items-center justify-between cursor-pointer active:bg-gray-200 dark:active:bg-[#1c1c1e]" onClick={() => updateSetting('incognito', !settings.incognito)}>
             <div className="flex flex-col max-w-[80%]">
-                <span className="text-[17px] text-white font-medium">Incognito Mode</span>
-                <span className="text-[13px] text-gray-400 leading-snug mt-1">Create anonymous threads that do not appear in your library and expire after 24 hours.</span>
+                <span className="text-[17px] text-gray-900 dark:text-white font-medium">Incognito Mode</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400 leading-snug mt-1">Create anonymous threads that do not appear in your library and expire after 24 hours.</span>
             </div>
             <ToggleSwitch enabled={settings.incognito} onChange={(v) => updateSetting('incognito', v)} />
         </div>
 
-        <div className="px-4 py-4 flex items-center justify-between cursor-pointer" onClick={() => updateSetting('notifications', !settings.notifications)}>
+        <div className="px-4 py-4 flex items-center justify-between cursor-pointer active:bg-gray-200 dark:active:bg-[#1c1c1e]" onClick={() => updateSetting('notifications', !settings.notifications)}>
              <div className="flex flex-col">
-                <span className="text-[17px] text-white font-medium">Notifications</span>
-                <span className="text-[13px] text-gray-400 mt-1">Daily threads from Discover</span>
+                <span className="text-[17px] text-gray-900 dark:text-white font-medium">Notifications</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Daily threads from Discover</span>
             </div>
             <ToggleSwitch enabled={settings.notifications} onChange={(v) => updateSetting('notifications', v)} />
         </div>
 
-        <div className="px-4 py-4 flex items-center justify-between cursor-pointer" onClick={() => updateSetting('dataRetention', !settings.dataRetention)}>
+        <div className="px-4 py-4 flex items-center justify-between cursor-pointer active:bg-gray-200 dark:active:bg-[#1c1c1e]" onClick={() => updateSetting('dataRetention', !settings.dataRetention)}>
             <div className="flex flex-col max-w-[80%]">
-                <span className="text-[17px] text-white font-medium">AI Data Retention</span>
-                <span className="text-[13px] text-gray-400 leading-snug mt-1">Allow StreekX to use search patterns to improve AI models.</span>
+                <span className="text-[17px] text-gray-900 dark:text-white font-medium">AI Data Retention</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400 leading-snug mt-1">Allow StreekX to use search patterns to improve AI models.</span>
             </div>
             <ToggleSwitch enabled={settings.dataRetention} onChange={(v) => updateSetting('dataRetention', v)} />
         </div>
@@ -222,13 +239,13 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
         
         {/* Simple Color Picker for Personalize */}
         <div className="px-4 py-4 flex items-center justify-between">
-            <span className="text-[17px] text-white font-medium">Personalize</span>
+            <span className="text-[17px] text-gray-900 dark:text-white font-medium">Personalize</span>
             <div className="flex gap-2">
                 {['#8d6e63', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981'].map(color => (
                     <button 
                         key={color}
                         onClick={() => updateSetting('accentColor', color)}
-                        className={`w-6 h-6 rounded-full border-2 transition-transform ${settings.accentColor === color ? 'border-white scale-125' : 'border-transparent scale-100'}`}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform ${settings.accentColor === color ? 'border-gray-900 dark:border-white scale-125' : 'border-transparent scale-100'}`}
                         style={{ backgroundColor: color }}
                     />
                 ))}
@@ -255,16 +272,16 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
         <SectionHeader label="Appearance" />
         <SettingRow 
             label="Theme" 
-            value={settings.theme} 
+            value={currentThemeLabel} 
             onClick={() => openSubMenu('theme', 'Theme', ['Dark Theme', 'Light Theme', 'System Default'], 'theme')}
         />
 
         {/* ASSISTANT SECTION */}
         <SectionHeader label="Assistant" />
-        <div className="px-4 py-4 flex items-center justify-between cursor-pointer" onClick={() => updateSetting('assistantEnabled', !settings.assistantEnabled)}>
+        <div className="px-4 py-4 flex items-center justify-between cursor-pointer active:bg-gray-200 dark:active:bg-[#1c1c1e]" onClick={() => updateSetting('assistantEnabled', !settings.assistantEnabled)}>
             <div className="flex flex-col">
-                <span className="text-[17px] text-white font-medium">Enable Assistant</span>
-                <span className="text-[13px] text-gray-400 mt-1">Wake with "Hey StreekX"</span>
+                <span className="text-[17px] text-gray-900 dark:text-white font-medium">Enable Assistant</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Wake with "Hey StreekX"</span>
             </div>
             <ToggleSwitch enabled={settings.assistantEnabled} onChange={(v) => updateSetting('assistantEnabled', v)} />
         </div>
@@ -301,7 +318,7 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
              <p className="text-[13px] text-gray-500 mt-1 px-2">Permanently remove your account and all associated data from StreekX servers.</p>
         </div>
 
-        <div className="text-center text-[11px] font-bold text-gray-600 pb-12 pt-4 uppercase tracking-widest">
+        <div className="text-center text-[11px] font-bold text-gray-400 dark:text-gray-600 pb-12 pt-4 uppercase tracking-widest">
             StreekX v2.4.0 (Build 302)
         </div>
 

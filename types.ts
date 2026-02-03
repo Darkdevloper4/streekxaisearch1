@@ -37,6 +37,15 @@ export interface Workspace {
 }
 
 // Search & AI
+export type SearchMode = 'Standard' | 'Pro' | 'Research' | 'Labs';
+
+export interface SourceFlags {
+    web: boolean;
+    academic: boolean;
+    finance: boolean;
+    social: boolean;
+}
+
 export interface Attachment {
   id: string;
   type: 'image' | 'file';
@@ -67,6 +76,8 @@ export interface SearchSession {
   timestamp: number;
   messages: ChatMessage[];
   projectId?: string; // Link to a project context
+  mode?: SearchMode; // Store which mode was used
+  sourceFlags?: SourceFlags;
 }
 
 // Weather

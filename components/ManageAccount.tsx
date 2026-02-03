@@ -306,10 +306,10 @@ export default function ManageAccount({ user, onBack, onUpdate, onLogout }: Mana
   if (view === 'SECURITY') return <SecuritySettings user={user} onBack={() => setView('MAIN')} />;
 
   return (
-    <div className="h-full bg-[#000000] flex flex-col animate-fade-in font-sans text-white overflow-y-auto">
+    <div className="h-[100dvh] bg-[#000000] flex flex-col animate-fade-in font-sans text-white overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 sticky top-0 bg-[#000000] z-20 border-b border-[#1c1c1e]">
+        <div className="flex items-center justify-between px-4 py-4 sticky top-0 bg-[#000000] z-20 border-b border-[#1c1c1e] flex-shrink-0">
             <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white rounded-full">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
