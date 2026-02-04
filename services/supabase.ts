@@ -298,6 +298,12 @@ export const db = {
         await supabase.from('sessions').delete().eq('id', sessionId);
     },
 
+    async clearAllSessions(userId: string) {
+        if (userId.startsWith('local_')) return;
+        const { error } = await supabase.from('sessions').delete().eq('user_id', userId);
+        if (error) console.error("Error clearing history:", error);
+    },
+
     async deleteProject(projectId: string) {
         await supabase.from('projects').delete().eq('id', projectId);
     }

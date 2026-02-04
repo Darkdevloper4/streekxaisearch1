@@ -91,7 +91,6 @@ export interface WeatherData {
 export type Screen = 
   | 'INTRO' 
   | 'AUTH' 
-  | 'PERMISSIONS' 
   | 'HOME' 
   | 'SEARCH' 
   | 'ASSISTANT'

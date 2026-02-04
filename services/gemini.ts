@@ -4,27 +4,25 @@ import { ChatMessage, SearchResult, SearchMode, SourceFlags, Attachment } from "
 import { performWebSearch } from "./search";
 
 // --- CONFIG ---
+const HARDCODED_KEY = "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";
+
 const getSettings = () => {
     const saved = localStorage.getItem('streekx_settings');
     return saved ? JSON.parse(saved) : {};
 };
 
 // --- GEMINI CLIENT ---
-const getGeminiClient = () => {
-  const apiKey = process.env.API_KEY; // From metadata/env
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+const getGeminiClient = (key: string) => {
+  return new GoogleGenAI({ apiKey: key });
 };
 
-// --- HELPER: CONVERT ATTACHMENT TO INLINE DATA ---
-const processAttachments = (attachments?: Attachment[]) => {
+// --- HELPERS FOR GEMINI ---
+const processAttachmentsForGemini = (attachments?: Attachment[]) => {
     if (!attachments || attachments.length === 0) return [];
     
     return attachments
         .filter(att => att.type === 'image' && att.url.startsWith('data:'))
         .map(att => {
-            // Extract base64 and mime type from data URL
-            // Format: data:image/png;base64,.....
             const matches = att.url.match(/^data:([^;]+);base64,(.+)$/);
             if (matches && matches.length === 3) {
                 return {
@@ -36,8 +34,153 @@ const processAttachments = (attachments?: Attachment[]) => {
             }
             return null;
         })
-        .filter(Boolean); // Remove nulls
+        .filter(Boolean);
 };
+
+const sanitizeHistoryForGemini = (history: ChatMessage[]) => {
+    const validHistory: any[] = [];
+    let lastRole = '';
+
+    for (const msg of history) {
+        if ((!msg.content || !msg.content.trim()) && (!msg.attachments || msg.attachments.length === 0)) {
+            continue;
+        }
+        const role = msg.role === 'model' ? 'model' : 'user';
+        const parts: any[] = [];
+        if (msg.content && msg.content.trim()) {
+            parts.push({ text: msg.content });
+        }
+        const attParts = processAttachmentsForGemini(msg.attachments);
+        if (attParts.length > 0) parts.push(...attParts);
+
+        if (parts.length === 0) continue;
+
+        if (role === lastRole && validHistory.length > 0) {
+            const prev = validHistory[validHistory.length - 1];
+            prev.parts.push(...parts); 
+        } else {
+            validHistory.push({ role, parts });
+            lastRole = role;
+        }
+    }
+    return validHistory;
+};
+
+// --- HELPERS FOR GROQ ---
+const generateGroqResponse = async (
+    apiKey: string,
+    systemPrompt: string,
+    history: ChatMessage[],
+    currentQuery: string,
+    currentAttachments: Attachment[],
+    onChunk: (text: string) => void,
+    isVoiceContext: boolean,
+    hasImages: boolean
+) => {
+    // 1. Prepare Messages in OpenAI Format
+    const messages: any[] = [
+        { role: 'system', content: systemPrompt }
+    ];
+
+    // History
+    history.forEach(msg => {
+        if ((!msg.content && !msg.attachments?.length)) return;
+        
+        const role = msg.role === 'model' ? 'assistant' : 'user';
+        let content: any = msg.content;
+
+        // If message has attachments, convert to content array
+        if (msg.attachments && msg.attachments.length > 0) {
+            content = [{ type: 'text', text: msg.content || " " }];
+            msg.attachments.forEach(att => {
+                if (att.type === 'image') {
+                    content.push({ type: 'image_url', image_url: { url: att.url } });
+                }
+            });
+        }
+        messages.push({ role, content });
+    });
+
+    // Current Message
+    let currentContent: any = currentQuery;
+    if (currentAttachments && currentAttachments.length > 0) {
+        currentContent = [{ type: 'text', text: currentQuery }];
+        currentAttachments.forEach(att => {
+            if (att.type === 'image') {
+                currentContent.push({ type: 'image_url', image_url: { url: att.url } });
+            }
+        });
+    }
+    messages.push({ role: 'user', content: currentContent });
+
+    // 2. Select Groq Model
+    // Voice/Speed -> Llama 3.2 11B Vision or Llama 3.3 70B (Very fast on Groq)
+    let model = 'llama-3.3-70b-versatile';
+    
+    // If images are present, we MUST use the vision model
+    if (hasImages || (currentAttachments && currentAttachments.length > 0)) {
+        model = 'llama-3.2-90b-vision-preview'; 
+    } else if (isVoiceContext) {
+        // For pure text voice chat, Llama 3.3 70B is extremely fast on Groq and smarter than 8b
+        model = 'llama-3.3-70b-versatile'; 
+    }
+
+    // 3. Fetch
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model,
+            messages,
+            stream: true,
+            temperature: isVoiceContext ? 0.6 : 0.7,
+            max_tokens: isVoiceContext ? 250 : 4096
+        })
+    });
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(`Groq API Error: ${err.error?.message || response.statusText}`);
+    }
+
+    // 4. Handle Streaming (SSE)
+    if (!response.body) throw new Error("No response body");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === 'data: [DONE]') return fullText;
+            if (trimmed.startsWith('data: ')) {
+                try {
+                    const json = JSON.parse(trimmed.slice(6));
+                    const content = json.choices[0]?.delta?.content || '';
+                    if (content) {
+                        fullText += content;
+                        onChunk(fullText);
+                    }
+                } catch (e) {
+                    // Ignore incomplete JSON chunks
+                }
+            }
+        }
+    }
+    return fullText;
+};
+
 
 // --- MAIN AI ORCHESTRATOR ---
 export const generateSmartResponse = async (
@@ -49,106 +192,161 @@ export const generateSmartResponse = async (
   projectContext?: string,
   searchMode: SearchMode = 'Standard',
   sourceFlags?: SourceFlags,
-  currentAttachments?: Attachment[]
+  currentAttachments?: Attachment[],
+  isVoiceContext: boolean = false
 ): Promise<string> => {
-    const settings = getSettings();
     
-    // 1. SEARCH STEP (Unless in Labs mode with no internet flag, but here we assume always search for now)
-    onStatusUpdate(searchMode === 'Research' ? "Conducting deep research..." : "Searching the web...");
-    
-    // Pass flags to search service
-    const searchResults = await performWebSearch(query, sourceFlags);
-    onSourcesFound(searchResults);
+    // 1. SEARCH STEP 
+    let shouldSearch = true;
+    if (isVoiceContext && query.length < 10 && !query.toLowerCase().includes('who') && !query.toLowerCase().includes('what')) {
+        shouldSearch = false;
+    }
 
-    // 2. REASONING / PROMPT ENGINEERING STEP
-    onStatusUpdate("Reading sources...");
-    await new Promise(r => setTimeout(r, 600)); 
+    let searchResults: SearchResult[] = [];
     
-    onStatusUpdate(searchMode === 'Pro' ? "Reasoning with Pro model..." : "Generating answer...");
+    // Check Settings
+    const settings = getSettings();
+    const userLanguage = settings.aiLanguage || 'Automatic';
+    const languageInstruction = userLanguage !== 'Automatic' ? `IMPORTANT: Respond in ${userLanguage} language.` : '';
+
+    if (shouldSearch) {
+        onStatusUpdate(searchMode === 'Research' ? "Conducting deep research..." : "Searching the web...");
+        try {
+            searchResults = await performWebSearch(query, sourceFlags);
+        } catch (e) {
+            console.warn("Search step failed, proceeding without sources", e);
+        }
+        onSourcesFound(searchResults);
+    }
+
+    // 2. REASONING PREP
+    if (shouldSearch) {
+        onStatusUpdate("Reading sources...");
+        await new Promise(r => setTimeout(r, 400)); 
+    }
+    onStatusUpdate(searchMode === 'Pro' ? "Reasoning..." : "Generating answer...");
 
     // Construct Context Blob
-    const sourcesText = searchResults.map((s, i) => `[${i + 1}] Title: ${s.title}\nURL: ${s.url}\nContent: ${s.snippet}`).join("\n\n");
+    const sourcesText = searchResults.length > 0 
+        ? searchResults.map((s, i) => `[${i + 1}] Title: ${s.title}\nURL: ${s.url}\nContent: ${s.snippet}`).join("\n\n")
+        : "No external sources found/needed. Rely on your internal knowledge.";
     
     const today = new Date().toDateString();
     
     // Adjust System Prompt based on Mode
     let modeInstruction = "";
-    switch (searchMode) {
-        case 'Pro':
-            modeInstruction = "You are in PRO MODE. Provide a highly detailed, extensive answer. Use advanced reasoning. Break down complex topics.";
-            break;
-        case 'Research':
-            modeInstruction = "You are in RESEARCH MODE. Focus on academic, factual, and deep-dive information. Prioritize consensus and data. Output should be structured like a research summary.";
-            break;
-        case 'Labs':
-            modeInstruction = "You are in LABS MODE. Be creative, experimental, and concise. Focus on code generation or novel ideas if applicable.";
-            break;
-        default:
-            modeInstruction = "Provide a direct, helpful, and professional answer.";
+    
+    if (isVoiceContext) {
+        modeInstruction = `
+        **VOICE MODE ACTIVE**:
+        - You are StreekX, a helpful, witty, and intelligent voice assistant.
+        - Your responses will be spoken out loud. 
+        - Keep answers SHORT, CONCISE, and CONVERSATIONAL (aim for 1-2 sentences for simple questions).
+        - Do NOT use Markdown formatting (no bold, no asterisks, no links).
+        - Do NOT use citations like [1].
+        - Be direct. Do not say "Based on the search results". Just answer.
+        `;
+    } else {
+        switch (searchMode) {
+            case 'Pro':
+                modeInstruction = `
+                **PRO MODE ACTIVE**:
+                - Provide a highly detailed, extensive answer.
+                - Use advanced reasoning.
+                - Break down complex topics.
+                `;
+                break;
+            case 'Research':
+                modeInstruction = `
+                **RESEARCH MODE ACTIVE**:
+                - Focus strictly on academic, factual, and data-driven information.
+                - Structure the output like a research summary.
+                `;
+                break;
+            case 'Labs':
+                modeInstruction = `
+                **LABS MODE ACTIVE**:
+                - Be creative, experimental, and think outside the box.
+                - Provide code snippets if applicable.
+                `;
+                break;
+            default:
+                modeInstruction = "Provide a direct, helpful, and professional answer.";
+        }
     }
 
     const systemPrompt = `You are StreekX, a real-time AI search engine. 
     Current Date: ${today}.
-    
     ${modeInstruction}
+    ${languageInstruction}
     
-    Your goal is to answer the user's query comprehensively using the provided Search Results and any images provided.
+    Your goal is to answer the user's query using the provided Search Results and any images provided.
     
     RULES:
-    1. **Citations**: You MUST cite your sources inline using brackets like [1], [2]. 
-       - Every factual claim must be backed by a citation from the provided context.
-       - Place citations immediately after the sentence or clause they support.
-    2. **Tone**: Professional, direct, and concise (unless Pro Mode). Do not fluff.
-    3. **Format**: Use Markdown. Use bold for key entities. Use lists where appropriate.
-    4. **No Hallucination**: If the search results do not contain the answer, admit it.
-    5. **Project Context**: ${projectContext || "None"}
+    1. **Citations**: ${isVoiceContext ? "NO CITATIONS." : "You MUST cite your sources inline using brackets like [1], [2]."}
+    2. **Tone**: ${isVoiceContext ? "Spoken, casual, natural." : "Professional, direct."}
+    3. **Format**: ${isVoiceContext ? "Plain text." : "Markdown."}
+    4. **Context**: ${projectContext || "None"}
     
     SEARCH RESULTS TO USE:
     ${sourcesText}
     `;
 
-    // Process History
-    const historyParts = history.map(h => {
-        const parts: any[] = [{ text: h.content }];
-        const attParts = processAttachments(h.attachments);
-        if (attParts.length > 0) parts.push(...attParts);
-        return {
-            role: h.role,
-            parts: parts
-        };
-    });
-
-    // Process Current User Message
-    const currentParts: any[] = [{ 
-        text: `User Query: ${query}\n\nBased on the search results provided in the system prompt, answer this query.` 
-    }];
-    const currentAttParts = processAttachments(currentAttachments);
-    if (currentAttParts.length > 0) {
-        currentParts.unshift(...currentAttParts); // Add images before text
+    // Prioritize Env Key, then Fallback Key
+    const apiKey = process.env.API_KEY || HARDCODED_KEY;
+    
+    if (!apiKey) {
+        const err = "Configuration Error: API Key missing.";
+        onChunk(err);
+        return err;
     }
 
     try {
-        const ai = getGeminiClient();
-        if (!ai) {
-            const mockText = "I see you haven't configured an API key. Normally, I would have read those " + searchResults.length + " sources and synthesized an answer. \n\nHere is a simulated summary: Based on the search results from " + (searchResults[0]?.source || "the web") + ", the answer to '" + query + "' involves complex factors described in the provided links.";
-            onChunk(mockText);
-            return mockText;
+        // --- PROVIDER DISPATCH ---
+        
+        // CHECK 1: GROQ (Prioritized for Voice)
+        // If key starts with 'gsk_' OR if we are in voice mode and the key allows it (assuming our fallback is Groq)
+        if (apiKey.startsWith('gsk_')) {
+            const hasImages = history.some(m => m.attachments?.some(a => a.type === 'image'));
+            return await generateGroqResponse(
+                apiKey,
+                systemPrompt,
+                history,
+                query,
+                currentAttachments || [],
+                onChunk,
+                isVoiceContext,
+                hasImages
+            );
         }
 
-        // Determine Model based on Mode
-        // Pro/Research -> Pro Model (gemini-3-pro-preview if available, falling back to flash for speed in demo)
-        // Standard -> Flash
-        // Actually, user instructions say: 'gemini-3-pro-preview' for complex text tasks.
-        const modelName = (searchMode === 'Pro' || searchMode === 'Research') 
+        // CHECK 2: GEMINI (Default for Google Keys)
+        const ai = getGeminiClient(apiKey);
+
+        const modelName = (searchMode === 'Pro' || searchMode === 'Research') && !isVoiceContext
             ? 'gemini-3-pro-preview' 
             : 'gemini-3-flash-preview';
 
+        const historyParts = sanitizeHistoryForGemini(history);
+        
+        const currentParts: any[] = [{ 
+            text: `User Query: ${query}\n\nBased on the search results provided in the system prompt, answer this query.` 
+        }];
+        const currentAttParts = processAttachmentsForGemini(currentAttachments);
+        if (currentAttParts.length > 0) {
+            currentParts.unshift(...currentAttParts);
+        }
+
+        const contents = [...historyParts];
+        if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+            contents[contents.length - 1].parts.push(...currentParts);
+        } else {
+            contents.push({ role: 'user', parts: currentParts });
+        }
+
         const responseStream = await ai.models.generateContentStream({
             model: modelName, 
-            contents: [
-                ...historyParts,
-                { role: 'user', parts: currentParts }
-            ],
+            contents: contents,
             config: {
                 systemInstruction: systemPrompt,
                 temperature: searchMode === 'Labs' ? 0.9 : 0.7
@@ -165,9 +363,9 @@ export const generateSmartResponse = async (
         }
         return fullResponse;
 
-    } catch (e) {
-        console.error("LLM Generation Error", e);
-        const errText = "I encountered an error generating the response. Please try again.";
+    } catch (e: any) {
+        console.error("AI Generation Error:", e);
+        const errText = "I'm having trouble connecting right now. Please check your connection.";
         onChunk(errText);
         return errText;
     }

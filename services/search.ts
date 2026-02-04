@@ -39,15 +39,28 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
     try {
         let finalQuery = query;
 
-        // Apply Source Filters via search operators
+        // Apply Source Filters via search operators (Real-time filtering)
         if (sourceFlags) {
             const operators = [];
-            if (sourceFlags.academic) operators.push('site:.edu OR site:arxiv.org OR site:scholar.google.com OR site:jstor.org');
-            if (sourceFlags.finance) operators.push('site:bloomberg.com OR site:cnbc.com OR site:finance.yahoo.com OR site:wsj.com');
-            if (sourceFlags.social) operators.push('site:reddit.com OR site:twitter.com OR site:quora.com OR site:news.ycombinator.com');
             
-            // If specific flags are set, append them. If only 'web' or nothing is set, normal search.
+            // ACADEMIC: .edu, scholar, jstor, researchgate, science.org
+            if (sourceFlags.academic) {
+                operators.push('site:.edu OR site:scholar.google.com OR site:jstor.org OR site:arxiv.org OR site:researchgate.net OR site:science.org OR site:nature.com');
+            }
+            
+            // FINANCE: bloomberg, cnbc, wsj, ft, investopedia, yahoo finance
+            if (sourceFlags.finance) {
+                operators.push('site:bloomberg.com OR site:cnbc.com OR site:finance.yahoo.com OR site:wsj.com OR site:ft.com OR site:investopedia.com OR site:marketwatch.com');
+            }
+            
+            // SOCIAL: reddit, twitter, quora, hacker news, linkedin, stackoverflow
+            if (sourceFlags.social) {
+                operators.push('site:reddit.com OR site:twitter.com OR site:quora.com OR site:news.ycombinator.com OR site:linkedin.com OR site:stackoverflow.com');
+            }
+            
+            // If specific flags are set, append them.
             if (operators.length > 0) {
+                // We wrap operators in parens to ensure logical grouping
                 finalQuery = `${query} (${operators.join(' OR ')})`;
             }
         }

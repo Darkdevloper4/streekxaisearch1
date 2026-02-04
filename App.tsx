@@ -6,7 +6,6 @@ import { getWeather } from './services/weather';
 import Home from './components/Home';
 import Auth from './components/Auth';
 import Intro from './components/Intro';
-import Permissions from './components/Permissions';
 import Profile from './components/Profile';
 import SearchInterface from './components/SearchInterface';
 import ManageAccount from './components/ManageAccount'; 
@@ -165,7 +164,8 @@ const App: React.FC = () => {
       localStorage.setItem('streekx_active_user', JSON.stringify(userData));
       
       loadCloudData(userData.id);
-      setScreen('PERMISSIONS');
+      setScreen('HOME');
+      initWeather();
   };
 
   const handleLogin = async (streekxId: string, password: string) => {
@@ -217,12 +217,8 @@ const App: React.FC = () => {
   };
 
   const handleSkipAuth = () => {
-    setScreen('PERMISSIONS');
-  };
-
-  const handlePermissionsGranted = () => {
-      initWeather();
-      setScreen('HOME');
+    setScreen('HOME');
+    initWeather();
   };
 
   // --- DATA OPERATIONS (Wrapped to Sync with DB) ---
@@ -283,9 +279,12 @@ const App: React.FC = () => {
     if (user) db.deleteSession(sessionId); // SYNC
   };
 
-  const clearHistory = () => {
+  const clearHistory = async () => {
       if (window.confirm("Are you sure you want to clear all history? This cannot be undone.")) {
-          setSessions([]);
+          setSessions([]); // Clear Local State IMMEDIATELY
+          if (user) {
+              await db.clearAllSessions(user.id); // Clear DB in background
+          }
       }
   };
 
@@ -330,7 +329,6 @@ const App: React.FC = () => {
     switch (screen) {
       case 'INTRO': return <Intro onAuth={() => setScreen('AUTH')} onSkip={handleSkipAuth} />;
       case 'AUTH': return <Auth onLogin={handleLogin} onSignup={handleSignup} />;
-      case 'PERMISSIONS': return <Permissions onGrant={handlePermissionsGranted} />;
       case 'HOME':
         return (
           <Home 
