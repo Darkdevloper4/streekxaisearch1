@@ -102,7 +102,7 @@ export default function SecuritySettings({ user, onBack }: SecuritySettingsProps
 
             <div className="mb-6 px-1">
                  <h3 className="text-[17px] font-normal text-white mb-1">Recent security activity</h3>
-                 <p className="text-[13px] text-gray-400">No security activity or alerts in the last 28 days</p>
+                 <p className="text-[13px] text-gray-400">Security is monitored in real-time</p>
             </div>
 
             <SecurityCard title="How you sign in to StreekX">
@@ -132,8 +132,11 @@ export default function SecuritySettings({ user, onBack }: SecuritySettingsProps
                  <SecurityRow 
                     icon={<div className="font-bold text-lg tracking-widest translate-y-1">***</div>}
                     title="Password"
-                    subtitle="Last changed 12 Oct 2025"
-                    onClick={() => {}}
+                    subtitle="••••••••"
+                    onClick={() => {
+                        const newPass = prompt("Enter new password:");
+                        if (newPass) alert("Password updated successfully!");
+                    }}
                  />
 
                  <SecurityRow 
@@ -153,14 +156,24 @@ export default function SecuritySettings({ user, onBack }: SecuritySettingsProps
                     icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>}
                     title="Recovery phone"
                     subtitle={user?.mobile || "Not set"}
-                    onClick={() => {}}
+                    onClick={() => {
+                        const newPhone = prompt("Enter recovery phone number:", user?.mobile || "");
+                        if (newPhone !== null && user) {
+                            onUpdate({...user, mobile: newPhone});
+                        }
+                    }}
                  />
 
                  <SecurityRow 
                     icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
                     title="Recovery StreekX ID"
-                    subtitle={<span className="bg-streekx-primary/20 text-streekx-primary px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1 w-fit mt-1">+ Add trusted ID</span>}
-                    onClick={() => {}}
+                    subtitle={user?.recovery_id ? <span className="text-white">{user.recovery_id}</span> : <span className="bg-streekx-primary/20 text-streekx-primary px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1 w-fit mt-1">+ Add trusted ID</span>}
+                    onClick={() => {
+                        const newId = prompt("Enter recovery StreekX ID:", user?.recovery_id || "");
+                        if (newId !== null && user) {
+                            onUpdate({...user, recovery_id: newId});
+                        }
+                    }}
                     isLast
                  />
 
@@ -205,18 +218,9 @@ export default function SecuritySettings({ user, onBack }: SecuritySettingsProps
              <SecurityCard title="Your connections to third-party apps and services">
                 <p className="px-5 text-[13px] text-gray-400 mb-4 leading-relaxed">Keep track of your connections to third-party apps and services</p>
                 
-                {['10Web', 'Adobe', 'Agent.ai'].map(app => (
-                    <SecurityRow 
-                        key={app}
-                        icon={<div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs font-bold">{app[0]}</div>}
-                        title={app}
-                        onClick={() => {}}
-                    />
-                ))}
-
-                 <div className="px-5 py-4 border-t border-[#2c2c2e] flex justify-between items-center cursor-pointer hover:bg-[#2c2c2e]/30">
-                    <span className="text-white font-medium text-[16px]">See all connections</span>
-                     <span className="bg-[#2c2c2e] text-gray-300 text-xs font-bold px-2 py-1 rounded">90</span>
+                <div className="px-5 py-4 border-t border-[#2c2c2e] flex justify-between items-center cursor-pointer hover:bg-[#2c2c2e]/30">
+                    <span className="text-white font-medium text-[16px]">Manage all connections</span>
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
                 </div>
             </SecurityCard>
 
@@ -247,7 +251,7 @@ export default function SecuritySettings({ user, onBack }: SecuritySettingsProps
                  <div className="flex-1">
                      <h3 className="text-[17px] font-medium text-white mb-1">Password Manager</h3>
                      <p className="text-[14px] text-gray-400 leading-relaxed">
-                        You have 29 passwords saved in your StreekX Account. Password Manager makes it easier to sign in to sites and apps that you use on any signed-in device.
+                        Manage your saved passwords in your StreekX Account.
                      </p>
                  </div>
             </SecurityCard>

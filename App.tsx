@@ -202,7 +202,12 @@ const App: React.FC = () => {
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
     localStorage.setItem('streekx_active_user', JSON.stringify(updatedUser));
-    setAuthUsers(prev => prev.map(u => u.streekx_id === updatedUser.streekx_id ? updatedUser : u));
+    setAuthUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    
+    // Also update storage for this specific guest user if it exists
+    if (updatedUser.id.startsWith('local_')) {
+       localStorage.setItem('streekx_user', JSON.stringify(updatedUser));
+    }
   };
 
   const handleSwitchAccount = (targetUser: UserProfile) => {

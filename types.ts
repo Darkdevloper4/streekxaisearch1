@@ -11,6 +11,7 @@ export interface UserProfile {
   dob?: string;
   gender?: 'Male' | 'Female' | 'Other';
   mobile?: string;
+  recovery_id?: string;
   created_at: string;
 }
 

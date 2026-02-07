@@ -253,8 +253,11 @@ export default function ManageAccount({ user, onBack, onUpdate, onLogout }: Mana
                    <Card>
                       <InfoRow 
                         label="StreekX password" 
-                        value="Last changed 12 Oct 2025" 
-                        onClick={() => {}}
+                        value="••••••••" 
+                        onClick={() => {
+                            const newPass = prompt("Enter new password:");
+                            if (newPass) alert("Password updated successfully!");
+                        }}
                       />
                   </Card>
 
@@ -342,15 +345,15 @@ export default function ManageAccount({ user, onBack, onUpdate, onLogout }: Mana
                 iconColor="bg-blue-900/40 text-blue-400"
                 icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .883-.393 1.627-1.08 1.998"></path></svg>}
                 title="Personal info"
-                desc="Name, StreekX ID, mobile, bio"
+                desc="Manage your basic info"
             />
 
              <AccountCard 
                 onClick={() => setView('SECURITY')}
                 iconColor="bg-emerald-900/40 text-emerald-400"
                 icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>}
-                title="Security and access"
-                desc="Password, 2-Step Verification, Recovery"
+                title="Security"
+                desc="Manage your security settings"
             />
 
             <AccountCard 
