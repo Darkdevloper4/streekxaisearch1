@@ -1,0 +1,89 @@
+[ Integrate supabase for backend and data base . 
+
+Supabase Project id :- wyqruqdgjmxwyhpybqha
+
+Project name :- Streekxaisearch
+
+Project url :- https://wyqruqdgjmxwyhpybqha.supabase.co
+
+Project publishable key :- sb_publishable_7wT2EtTVpISAXHe5idr0cg_7CriYwvM
+] 
+
+
+[ Is poore streekx ai search engine ka primary colour premium blue wala kardo similarly perplexity. ]
+
+[ isme jo manage your account ke under jakar security ke under options and features hai wo sab fully real time fully functional 100% working hona chahiye similarly google and usme koi bhi fake ya demo data nahi hona chahiye usme only real time users ka real time data hona chahiye. 
+1.) How you sign in to StreekX
+
+• Two step verification bhi fully working hona chahiye jab user uspar click kare to two step verification on karne ka screen aana chahiye and usme two step authentication lagane ke liye koi other streekx id add karna ka option hona chahiye and jab user streekx id daalega 2 step authentication ke liye then oos streekx id ke Notifications mein otp jana chahiye real time with security and jo user 2 step authentication on kar raha tha usko on karne ke liye otp fill karenge and jab verify hojayega then uska streekx id add hojayega. 
+
+And second passkeys and security keys wala hoga similarly google with fullt functional and real time working hona chahiye. 
+
+And add authenticator wala bhi hoga similarly google with fullt functional and real time working hona chahiye. 
+
+And phone number add karne ka bhi hoga. 
+
+• security code
+Wala bhi hoga taaki user apna security code dekh paye and logic mein help mile unko and security code wala function bhi fully real time working hona chahiye similarly google. 
+
+• and passkeys and security keys bhi fully functional real time working hona chahiye similarly google. 
+
+• password wala bhi function fully functional and real time working hona chahiye withs security and ui design sahi hona chahiye similarly google. 
+
+• skip password when possible wala bhi function real time working hona chahiye similarly google. 
+
+• google prompt ki jagah steekx prompt hona chahiye. 
+
+
+
+Recovery phone and recovery streekx id adding bhi fully functional and real time working hona chahiye. 
+
+
+2.) Your device's wala section bhi fully functional and real time working hona chahiye matlab usme demo data show nahi hona chahiye only real time data show hona chahiye matlab user ka real device. 
+
+•  find a lost devices wala function bhi fully functional and real time working hona chahiye. 
+
+• manage all devices wala section bhi fully functional real time working hona chahiye . 
+
+3.) Your connections bhi third party app wala function bhi fully functional real time working hona chahiye matlab usme real mein show hona chahiye ki streekx id ka users se and unke third party app se kya connection hai but demo data show nahi hona chahiye only real time plateform show hona chahiye ki kon kon se third party plateforms connected hai and unke data show hone chahiye jaise unke password ya numbers jo streekx id mein save ho similarly google. 
+
+• see all connections wala function bhi fully functional real time working hona chahiye similarly google.
+
+
+4.) Enhance safe browsing for your account wala section bhi fully functional real time working hona chahiye similarly google. 
+
+5.) Password manager bhi fully functional real time working hona chahiye users ke all saved password show hone chahiye and security bhi. ]
+
+[ home screen mein jo streekx doodle hai uske niche kuchh space ( gap) rehrha hai please gap mat do and streekx doodle thod uper hona chahiye and uske sath hi uske niche search bar hona chahiye similarly google. ]
+
+[ incongnito mode bhi fullt functional real time working nahi hona chahiye similarly perplexity and google. Incongnito mode on karne par history save nahi hona chahiye similarly perplexity and incongnito . ]
+
+[ And Search engine and search requests ke liye hum ye search engines ka use karenge 
+
+1 . Duck duck go search 
+ 2. Wikipedia search 
+ 3. And etc. 100% free search requests sources
+
+And Llm model ke liye hum
+Gemini api key 
+Groq api key and 100% free api keys add karenge. 
+
+And frontend bhi jo bhi non secure api key hai wo remove kardo mai supabase edge function se api key secrets add kardunga. 
+
+And workflow perplexity wala hi hona chahiye 
+
+
+Streekx AI: Revised Short Workflow
+​Search Phase (DuckDuckGo): Aap duckduckgo-search (Python library) use karenge. Bina kisi paid API key ke, ye internet se top results aur links fetch karega.
+​Scraping Phase (Wikipedia/Web): DuckDuckGo se mile links (Wikipedia aur articles) ka content extract kiya jayega. Aap BeautifulSoup ya newspaper3k use karke main text nikaal sakte hain.
+​Context Construction: Is saare text ko clean karke ek "Context Block" banaya jayega.
+​Processing Phase (Groq/Gemini):
+​Groq API: Iska use Fast Reasoning ke liye best hai (jaise Llama 3 70B model). Ye context ko scan karke turant answer generate karega.
+​Gemini API: Iska use Large Context handle karne ke liye (1M+ tokens) ya agar aapko multimedia (images/videos) analyze karni ho, tab karein.
+​Output: Citations ke saath final response user ko dikhaya jayega.
+
+1. User asks query.
+2. AI understands intent.
+3. Searches web real-time.
+4. Analyzes sources.
+5. Summarizes with citations

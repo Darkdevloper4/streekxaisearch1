@@ -12,6 +12,7 @@ export interface UserProfile {
   gender?: 'Male' | 'Female' | 'Other';
   mobile?: string;
   recovery_id?: string;
+  two_step_enabled?: boolean;
   created_at: string;
 }
 
