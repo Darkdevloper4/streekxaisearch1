@@ -339,24 +339,22 @@ export const generateSmartResponse = async (
             onChunk(err);
             return err;
         }
-
-        try {
             // --- PROVIDER DISPATCH ---
             
             // GROQ HANDLER
             if (selectedProvider === 'groq') {
-            const hasImages = history.some(m => m.attachments?.some(a => a.type === 'image'));
-            return await generateGroqResponse(
-                apiKey,
-                systemPrompt,
-                history,
-                query,
-                currentAttachments || [],
-                onChunk,
-                isVoiceContext,
-                hasImages
-            );
-        }
+                const hasImages = history.some(m => m.attachments?.some(a => a.type === 'image'));
+                return await generateGroqResponse(
+                    apiKey,
+                    systemPrompt,
+                    history,
+                    query,
+                    currentAttachments || [],
+                    onChunk,
+                    isVoiceContext,
+                    hasImages
+                );
+            }
 
             // GEMINI HANDLER
             const ai = getGeminiClient(apiKey);
@@ -401,10 +399,10 @@ export const generateSmartResponse = async (
             }
             return fullResponse;
 
-        } catch (e: any) {
-            console.error("AI Generation Error:", e);
-            const errText = "I'm having trouble connecting right now. Please check your connection.";
-            onChunk(errText);
-            return errText;
-        }
+    } catch (e: any) {
+        console.error("AI Generation Error:", e);
+        const errText = "I'm having trouble connecting right now. Please check your connection.";
+        onChunk(errText);
+        return errText;
+    }
 };
