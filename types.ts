@@ -1,4 +1,45 @@
 
+// Security & Authentication
+export interface SecuritySettings {
+  two_step_enabled: boolean;
+  backup_streekx_id?: string;
+  passkey_enabled: boolean;
+  security_key_enabled: boolean;
+  authenticator_enabled: boolean;
+  recovery_email?: string;
+  safe_browsing: boolean;
+  skip_password_possible: boolean;
+  security_codes: string[];
+  active_sessions: DeviceSession[];
+  third_party_connections: ThirdPartyConnection[];
+  saved_passwords: SavedPassword[];
+}
+
+export interface DeviceSession {
+  id: string;
+  device_name: string;
+  device_type: 'android' | 'ios' | 'windows' | 'mac' | 'web';
+  last_used: string;
+  location: string;
+  is_current: boolean;
+}
+
+export interface ThirdPartyConnection {
+  id: string;
+  app_name: string;
+  app_icon?: string;
+  connected_at: string;
+  permissions: string[];
+  last_accessed: string;
+}
+
+export interface SavedPassword {
+  id: string;
+  app_name: string;
+  username: string;
+  created_at: string;
+}
+
 // User & Profile
 export interface UserProfile {
   id: string;
@@ -12,7 +53,11 @@ export interface UserProfile {
   gender?: 'Male' | 'Female' | 'Other';
   mobile?: string;
   recovery_id?: string;
+  recovery_email?: string;
   two_step_enabled?: boolean;
+  passkey_enabled?: boolean;
+  authenticator_enabled?: boolean;
+  security: SecuritySettings;
   created_at: string;
 }
 

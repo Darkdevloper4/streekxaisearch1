@@ -4,11 +4,30 @@ import { ChatMessage, SearchResult, SearchMode, SourceFlags, Attachment } from "
 import { performWebSearch } from "./search";
 
 // --- CONFIG ---
-const HARDCODED_KEY = "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";
-
+// API Keys should be fetched from Supabase Edge Functions only, not hardcoded in frontend
 const getSettings = () => {
     const saved = localStorage.getItem('streekx_settings');
     return saved ? JSON.parse(saved) : {};
+};
+
+// Helper to get API key from Edge Function (secure backend)
+const getSecureAPIKey = async (provider: 'groq' | 'gemini'): Promise<string> => {
+    try {
+        const response = await fetch('/api/get-ai-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider })
+        });
+        if (!response.ok) throw new Error('Failed to get API key');
+        const data = await response.json();
+        return data.key;
+    } catch (error) {
+        console.error('Could not fetch secure API key:', error);
+        // Fallback: Check if key is in environment
+        if (provider === 'groq') return process.env.GROQ_API_KEY || '';
+        if (provider === 'gemini') return process.env.GEMINI_API_KEY || '';
+        return '';
+    }
 };
 
 // --- GEMINI CLIENT ---
@@ -292,21 +311,40 @@ export const generateSmartResponse = async (
     ${sourcesText}
     `;
 
-    // Prioritize Env Key, then Fallback Key
-    const apiKey = process.env.API_KEY || HARDCODED_KEY;
-    
-    if (!apiKey) {
-        const err = "Configuration Error: API Key missing.";
-        onChunk(err);
-        return err;
-    }
-
     try {
-        // --- PROVIDER DISPATCH ---
+        // Determine which provider to use based on voice context and available keys
+        let apiKey = '';
+        let selectedProvider: 'groq' | 'gemini' = 'gemini';
         
-        // CHECK 1: GROQ (Prioritized for Voice)
-        // If key starts with 'gsk_' OR if we are in voice mode and the key allows it (assuming our fallback is Groq)
-        if (apiKey.startsWith('gsk_')) {
+        if (isVoiceContext) {
+            // Prefer Groq for voice (faster response times)
+            apiKey = await getSecureAPIKey('groq');
+            if (apiKey) selectedProvider = 'groq';
+            else {
+                apiKey = await getSecureAPIKey('gemini');
+                selectedProvider = 'gemini';
+            }
+        } else {
+            // Prefer Gemini for text (better reasoning)
+            apiKey = await getSecureAPIKey('gemini');
+            if (apiKey) selectedProvider = 'gemini';
+            else {
+                apiKey = await getSecureAPIKey('groq');
+                selectedProvider = 'groq';
+            }
+        }
+        
+        if (!apiKey) {
+            const err = "Configuration Error: No AI API Key available. Please configure in environment variables.";
+            onChunk(err);
+            return err;
+        }
+
+        try {
+            // --- PROVIDER DISPATCH ---
+            
+            // GROQ HANDLER
+            if (selectedProvider === 'groq') {
             const hasImages = history.some(m => m.attachments?.some(a => a.type === 'image'));
             return await generateGroqResponse(
                 apiKey,
@@ -320,53 +358,53 @@ export const generateSmartResponse = async (
             );
         }
 
-        // CHECK 2: GEMINI (Default for Google Keys)
-        const ai = getGeminiClient(apiKey);
+            // GEMINI HANDLER
+            const ai = getGeminiClient(apiKey);
 
-        const modelName = (searchMode === 'Pro' || searchMode === 'Research') && !isVoiceContext
-            ? 'gemini-3-pro-preview' 
-            : 'gemini-3-flash-preview';
+            const modelName = (searchMode === 'Pro' || searchMode === 'Research') && !isVoiceContext
+                ? 'gemini-3-pro-preview' 
+                : 'gemini-3-flash-preview';
 
-        const historyParts = sanitizeHistoryForGemini(history);
-        
-        const currentParts: any[] = [{ 
-            text: `User Query: ${query}\n\nBased on the search results provided in the system prompt, answer this query.` 
-        }];
-        const currentAttParts = processAttachmentsForGemini(currentAttachments);
-        if (currentAttParts.length > 0) {
-            currentParts.unshift(...currentAttParts);
-        }
-
-        const contents = [...historyParts];
-        if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
-            contents[contents.length - 1].parts.push(...currentParts);
-        } else {
-            contents.push({ role: 'user', parts: currentParts });
-        }
-
-        const responseStream = await ai.models.generateContentStream({
-            model: modelName, 
-            contents: contents,
-            config: {
-                systemInstruction: systemPrompt,
-                temperature: searchMode === 'Labs' ? 0.9 : 0.7
+            const historyParts = sanitizeHistoryForGemini(history);
+            
+            const currentParts: any[] = [{ 
+                text: `User Query: ${query}\n\nBased on the search results provided in the system prompt, answer this query.` 
+            }];
+            const currentAttParts = processAttachmentsForGemini(currentAttachments);
+            if (currentAttParts.length > 0) {
+                currentParts.unshift(...currentAttParts);
             }
-        });
 
-        let fullResponse = "";
-        for await (const chunk of responseStream) {
-            const text = chunk.text;
-            if (text) {
-                fullResponse += text;
-                onChunk(fullResponse);
+            const contents = [...historyParts];
+            if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+                contents[contents.length - 1].parts.push(...currentParts);
+            } else {
+                contents.push({ role: 'user', parts: currentParts });
             }
-        }
-        return fullResponse;
 
-    } catch (e: any) {
-        console.error("AI Generation Error:", e);
-        const errText = "I'm having trouble connecting right now. Please check your connection.";
-        onChunk(errText);
-        return errText;
-    }
+            const responseStream = await ai.models.generateContentStream({
+                model: modelName, 
+                contents: contents,
+                config: {
+                    systemInstruction: systemPrompt,
+                    temperature: searchMode === 'Labs' ? 0.9 : 0.7
+                }
+            });
+
+            let fullResponse = "";
+            for await (const chunk of responseStream) {
+                const text = chunk.text;
+                if (text) {
+                    fullResponse += text;
+                    onChunk(fullResponse);
+                }
+            }
+            return fullResponse;
+
+        } catch (e: any) {
+            console.error("AI Generation Error:", e);
+            const errText = "I'm having trouble connecting right now. Please check your connection.";
+            onChunk(errText);
+            return errText;
+        }
 };
