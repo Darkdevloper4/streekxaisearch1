@@ -1,0 +1,41 @@
+isme jo manage your account ke under jakar security ke under options and features hai wo sab fully real time fully functional 100% working hona chahiye similarly google and usme koi bhi fake ya demo data nahi hona chahiye usme only real time users ka real time data hona chahiye. 
+1.) How you sign in to StreekX
+
+• Two step verification bhi fully working hona chahiye jab user uspar click kare to two step verification on karne ka screen aana chahiye and usme two step authentication lagane ke liye koi other streekx id add karna ka option hona chahiye and jab user streekx id daalega 2 step authentication ke liye then oos streekx id ke Notifications mein otp jana chahiye real time with security and jo user 2 step authentication on kar raha tha usko on karne ke liye otp fill karenge and jab verify hojayega then uska streekx id add hojayega. 
+
+And second passkeys and security keys wala hoga similarly google with fullt functional and real time working hona chahiye. 
+
+And add authenticator wala bhi hoga similarly google with fullt functional and real time working hona chahiye. 
+
+And phone number add karne ka bhi hoga. 
+
+• security code
+Wala bhi hoga taaki user apna security code dekh paye and logic mein help mile unko and security code wala function bhi fully real time working hona chahiye similarly google. 
+
+• and passkeys and security keys bhi fully functional real time working hona chahiye similarly google. 
+
+• password wala bhi function fully functional and real time working hona chahiye withs security and ui design sahi hona chahiye similarly google. 
+
+• skip password when possible wala bhi function real time working hona chahiye similarly google. 
+
+• google prompt ki jagah steekx prompt hona chahiye. 
+
+
+
+Recovery phone and recovery streekx id adding bhi fully functional and real time working hona chahiye. 
+
+
+2.) Your device's wala section bhi fully functional and real time working hona chahiye matlab usme demo data show nahi hona chahiye only real time data show hona chahiye matlab user ka real device. 
+
+•  find a lost devices wala function bhi fully functional and real time working hona chahiye. 
+
+• manage all devices wala section bhi fully functional real time working hona chahiye . 
+
+3.) Your connections bhi third party app wala function bhi fully functional real time working hona chahiye matlab usme real mein show hona chahiye ki streekx id ka users se and unke third party app se kya connection hai but demo data show nahi hona chahiye only real time plateform show hona chahiye ki kon kon se third party plateforms connected hai and unke data show hone chahiye jaise unke password ya 
+numbers jo streekx id mein save ho similarly google. 
+
+• see all connections wala function bhi fully functional real time working hona chahiye similarly google.
+
+4.) Enhance safe browsing for your account wala section bhi fully functional real time working hona chahiye similarly google. 
+
+5.) Password manager bhi fully functional real time working hona chahiye users ke all saved password show hone chahiye and security bhi.
