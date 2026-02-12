@@ -214,8 +214,10 @@ export const generateSmartResponse = async (
         onStatusUpdate("Searching the web...");
         try {
             searchResults = await performWebSearch(query, sourceFlags);
+            console.log("[v0] DuckDuckGo search returned", searchResults.length, "results");
         } catch (e) {
-            console.warn("Web search failed", e);
+            console.warn("[v0] Web search failed:", e instanceof Error ? e.message : e);
+            // searchResults remains empty, will trigger fallback to Wikipedia
         }
 
         // Step 2: Augment with Wikipedia if research mode or if we need more context
@@ -223,17 +225,19 @@ export const generateSmartResponse = async (
             onStatusUpdate("Checking Wikipedia...");
             try {
                 const wikiResults = await searchWikipedia(query);
+                console.log("[v0] Wikipedia search returned", wikiResults.length, "results");
                 // Combine results (Wikipedia first if in research mode, otherwise DuckDuckGo first)
                 searchResults = searchMode === 'Research' 
                     ? [...wikiResults.slice(0, 2), ...searchResults.slice(0, 3)]
                     : [...searchResults.slice(0, 3), ...wikiResults.slice(0, 2)];
             } catch (e) {
-                console.warn("Wikipedia search failed", e);
+                console.warn("[v0] Wikipedia search failed:", e instanceof Error ? e.message : e);
             }
         }
 
         // Limit to top 5-6 sources for better context window management
         searchResults = searchResults.slice(0, 6);
+        console.log("[v0] Total sources for synthesis:", searchResults.length);
         onSourcesFound(searchResults);
     }
 
@@ -391,8 +395,24 @@ export const generateSmartResponse = async (
         return fullResponse;
 
     } catch (e: any) {
-        console.error("AI Generation Error:", e);
-        const errText = "I'm having trouble connecting right now. Please check your connection.";
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        console.error("[v0] AI Generation Error:", errorMsg);
+        
+        // Provide specific error guidance
+        let errText = "I'm having trouble generating a response. ";
+        
+        if (errorMsg.includes('429') || errorMsg.includes('rate')) {
+            errText += "The AI service is rate limited. Please try again in a moment.";
+        } else if (errorMsg.includes('401') || errorMsg.includes('auth')) {
+            errText += "API authentication failed. Please check your API key in settings.";
+        } else if (errorMsg.includes('gateway') || errorMsg.includes('502') || errorMsg.includes('503')) {
+            errText += "The service is temporarily unavailable. Please try again shortly.";
+        } else if (errorMsg.includes('timeout')) {
+            errText += "The request timed out. Please check your internet connection and try again.";
+        } else {
+            errText += "Please check your connection and API configuration.";
+        }
+        
         onChunk(errText);
         return errText;
     }

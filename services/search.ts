@@ -1,14 +1,27 @@
 
 import { SearchResult, SourceFlags } from "../types";
 
-// Wikipedia Search Function
+// Wikipedia Search Function with CORS handling
 export const searchWikipedia = async (query: string): Promise<SearchResult[]> => {
     try {
-        const response = await fetch(
-            `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=5`
-        );
+        // Wikipedia API supports CORS natively, no proxy needed
+        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=5`;
         
-        if (!response.ok) throw new Error('Wikipedia API failed');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        
+        const response = await fetch(wikiUrl, { 
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            console.warn("[v0] Wikipedia API returned:", response.status);
+            return [];
+        }
         
         const data = await response.json();
         
@@ -16,15 +29,15 @@ export const searchWikipedia = async (query: string): Promise<SearchResult[]> =>
             return [];
         }
         
-        return data.query.search.map((item: any) => ({
+        return data.query.search.slice(0, 3).map((item: any) => ({
             title: item.title,
-            url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
-            snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, ''), // Strip HTML tags
+            url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
+            snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, '').substring(0, 150), // Strip HTML tags and limit
             source: 'wikipedia.org',
             favicon: 'https://en.wikipedia.org/static/favicon/wikipedia.ico'
         }));
     } catch (error) {
-        console.warn("Wikipedia search failed:", error);
+        console.warn("[v0] Wikipedia search error:", error instanceof Error ? error.message : error);
         return [];
     }
 };
@@ -96,68 +109,96 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
         // 1. Use DuckDuckGo HTML endpoint
         const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(finalQuery)}`;
         
-        // 2. Route through AllOrigins (CORS Proxy)
+        // 2. Route through AllOrigins (CORS Proxy) with timeout
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}&t=${Date.now()}`;
         
-        const response = await fetch(proxyUrl);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        let response;
+        try {
+            response = await fetch(proxyUrl, { signal: controller.signal });
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            console.warn("[v0] DuckDuckGo proxy timeout/failed, using fallback");
+            return getFallbackResults(query);
+        }
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
-            throw new Error(`Proxy returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        const html = data.contents;
-
-        if (!html) {
-             throw new Error("Empty response from proxy");
-        }
-
-        // 3. Parse HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        
-        const results: SearchResult[] = [];
-        const resultElements = doc.querySelectorAll('.result');
-
-        resultElements.forEach((el, index) => {
-            if (index >= 8) return; // Limit to top 8 results for better context
-            
-            const titleEl = el.querySelector('.result__title a');
-            const snippetEl = el.querySelector('.result__snippet');
-            const urlEl = el.querySelector('.result__url');
-
-            if (titleEl && snippetEl) {
-                // Extract URL
-                let rawUrl = (urlEl as HTMLElement)?.innerText.trim() || (titleEl as HTMLAnchorElement).href;
-                if (rawUrl.startsWith('//')) rawUrl = 'https:' + rawUrl;
-
-                let domain = 'web';
-                try {
-                    domain = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`).hostname;
-                } catch (e) {}
-
-                const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-
-                results.push({
-                    title: (titleEl as HTMLElement).innerText.trim(),
-                    url: rawUrl,
-                    snippet: (snippetEl as HTMLElement).innerText.trim(),
-                    source: domain,
-                    favicon: favicon
-                });
-            }
-        });
-
-        // Fallback if scraping fails
-        if (results.length === 0) {
-            console.warn("Search scraping yielded 0 results, using fallback.");
+            console.warn("[v0] Proxy returned status:", response.status);
             return getFallbackResults(query);
         }
 
-        return results;
+        let data, html;
+        try {
+            data = await response.json();
+            html = data.contents;
+        } catch (parseError) {
+            console.warn("[v0] Failed to parse proxy response");
+            return getFallbackResults(query);
+        }
+
+        if (!html) {
+             console.warn("[v0] Empty response from proxy");
+             return getFallbackResults(query);
+        }
+
+        // 3. Parse HTML
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            const results: SearchResult[] = [];
+            const resultElements = doc.querySelectorAll('.result');
+
+            resultElements.forEach((el, index) => {
+                if (index >= 8) return; // Limit to top 8 results for better context
+                
+                const titleEl = el.querySelector('.result__title a');
+                const snippetEl = el.querySelector('.result__snippet');
+                const urlEl = el.querySelector('.result__url');
+
+                if (titleEl && snippetEl) {
+                    try {
+                        // Extract URL
+                        let rawUrl = (urlEl as HTMLElement)?.innerText.trim() || (titleEl as HTMLAnchorElement).href;
+                        if (rawUrl.startsWith('//')) rawUrl = 'https:' + rawUrl;
+
+                        let domain = 'web';
+                        try {
+                            domain = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`).hostname;
+                        } catch (e) {}
+
+                        const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+                        results.push({
+                            title: (titleEl as HTMLElement).innerText.trim(),
+                            url: rawUrl,
+                            snippet: (snippetEl as HTMLElement).innerText.trim(),
+                            source: domain,
+                            favicon: favicon
+                        });
+                    } catch (itemError) {
+                        console.warn("[v0] Error parsing individual search result:", itemError);
+                    }
+                }
+            });
+
+            // Fallback if scraping fails
+            if (results.length === 0) {
+                console.warn("[v0] Search scraping yielded 0 results, using fallback");
+                return getFallbackResults(query);
+            }
+
+            return results;
+        } catch (parseError) {
+            console.warn("[v0] Error parsing search HTML:", parseError);
+            return getFallbackResults(query);
+        }
 
     } catch (error) {
-        console.warn("Search API Error (using fallback):", error);
+        console.warn("[v0] Search API Error (using fallback):", error instanceof Error ? error.message : error);
         return getFallbackResults(query);
     }
 };
