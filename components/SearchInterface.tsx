@@ -233,30 +233,30 @@ export default function SearchInterface({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#000000] text-white font-sans animate-fade-in relative" onClick={() => { setShowModeSelector(false); }}>
+    <div className="flex flex-col h-full bg-white dark:bg-[#000000] text-gray-900 dark:text-white font-sans animate-fade-in relative" onClick={() => { setShowModeSelector(false); }}>
         
         {/* SOURCES MODAL (Perplexity Style) */}
         {showSources && (
             <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-fade-in" onClick={() => setShowSources(false)}>
-                <div className="w-full bg-[#1c1c1e] rounded-t-[2rem] border-t border-[#2c2c2e] overflow-hidden animate-slide-up p-6 pb-12 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="w-full bg-white dark:bg-[#1c1c1e] rounded-t-[2rem] border-t border-gray-200 dark:border-[#2c2c2e] overflow-hidden animate-slide-up p-6 pb-12 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                     {/* Handle */}
                     <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-6 opacity-40"></div>
                     
-                    <h2 className="text-xl font-bold text-white mb-6">Add sources</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Add sources</h2>
 
                     {/* Media Buttons */}
                     <div className="grid grid-cols-3 gap-3 mb-8">
-                        <button onClick={() => mediaInputRef.current?.click()} className="aspect-square rounded-2xl bg-[#2c2c2e] flex flex-col items-center justify-center gap-2 hover:bg-[#3a3a3c] transition-colors border border-transparent hover:border-gray-500 active:scale-95">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <span className="text-[13px] font-bold text-gray-300">Photos</span>
+                        <button onClick={() => mediaInputRef.current?.click()} className="aspect-square rounded-2xl bg-gray-100 dark:bg-[#2c2c2e] flex flex-col items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-[#3a3a3c] transition-colors border border-transparent hover:border-gray-400 dark:hover:border-gray-500 active:scale-95">
+                            <svg className="w-8 h-8 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span className="text-[13px] font-bold text-gray-600 dark:text-gray-300">Photos</span>
                         </button>
-                        <button onClick={() => cameraInputRef.current?.click()} className="aspect-square rounded-2xl bg-[#2c2c2e] flex flex-col items-center justify-center gap-2 hover:bg-[#3a3a3c] transition-colors border border-transparent hover:border-gray-500 active:scale-95">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                            <span className="text-[13px] font-bold text-gray-300">Camera</span>
+                        <button onClick={() => cameraInputRef.current?.click()} className="aspect-square rounded-2xl bg-gray-100 dark:bg-[#2c2c2e] flex flex-col items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-[#3a3a3c] transition-colors border border-transparent hover:border-gray-400 dark:hover:border-gray-500 active:scale-95">
+                            <svg className="w-8 h-8 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0118.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span className="text-[13px] font-bold text-gray-600 dark:text-gray-300">Camera</span>
                         </button>
-                        <button onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl bg-[#2c2c2e] flex flex-col items-center justify-center gap-2 hover:bg-[#3a3a3c] transition-colors border border-transparent hover:border-gray-500 active:scale-95">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <span className="text-[13px] font-bold text-gray-300">File</span>
+                        <button onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl bg-gray-100 dark:bg-[#2c2c2e] flex flex-col items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-[#3a3a3c] transition-colors border border-transparent hover:border-gray-400 dark:hover:border-gray-500 active:scale-95">
+                            <svg className="w-8 h-8 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span className="text-[13px] font-bold text-gray-600 dark:text-gray-300">File</span>
                         </button>
                     </div>
 
@@ -268,15 +268,15 @@ export default function SearchInterface({
                             { id: 'finance', label: 'Finance', sub: 'Search SEC filings', icon: '💰' },
                             { id: 'social', label: 'Social', sub: 'Discussions and opinions', icon: '💬' }
                         ].map(item => (
-                            <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-[#2c2c2e] cursor-pointer" onClick={() => setSourceFlags(prev => ({ ...prev, [item.id]: !prev[item.id as keyof typeof prev] }))}>
+                            <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-[#2c2c2e] cursor-pointer" onClick={() => setSourceFlags(prev => ({ ...prev, [item.id]: !prev[item.id as keyof typeof prev] }))}>
                                 <div className="flex items-center gap-4">
                                     <span className="text-2xl opacity-80">{item.icon}</span>
                                     <div>
-                                        <h3 className="text-[15px] font-bold text-white">{item.label}</h3>
-                                        <p className="text-[13px] text-gray-400">{item.sub}</p>
+                                        <h3 className="text-[15px] font-bold text-gray-900 dark:text-white">{item.label}</h3>
+                                        <p className="text-[13px] text-gray-600 dark:text-gray-400">{item.sub}</p>
                                     </div>
                                 </div>
-                                <ToggleSwitch colorClass="bg-[#00c2cb]" checked={sourceFlags[item.id as keyof typeof sourceFlags]} onChange={() => setSourceFlags(prev => ({ ...prev, [item.id]: !prev[item.id as keyof typeof prev] }))} />
+                                <ToggleSwitch colorClass="bg-streekx-primary" checked={sourceFlags[item.id as keyof typeof sourceFlags]} onChange={() => setSourceFlags(prev => ({ ...prev, [item.id]: !prev[item.id as keyof typeof prev] }))} />
                             </div>
                         ))}
                     </div>
@@ -285,8 +285,8 @@ export default function SearchInterface({
         )}
 
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-4 py-4 sticky top-0 z-20 bg-[#000000]/90 backdrop-blur-md border-b border-[#1c1c1e]">
-            <button onClick={onBack} className="w-10 h-10 rounded-full bg-[#1c1c1e] flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+        <div className="flex items-center justify-between px-4 py-4 sticky top-0 z-20 bg-white/90 dark:bg-[#000000]/90 backdrop-blur-md border-b border-gray-200 dark:border-[#1c1c1e]">
+            <button onClick={onBack} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-[#1c1c1e] flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
             <div className="flex flex-col items-center">
@@ -302,7 +302,7 @@ export default function SearchInterface({
              {/* Project Context Badge */}
              {activeProject && messages.length <= 2 && (
                  <div className="flex justify-center mb-6">
-                     <div className="bg-[#1c1c1e] border border-[#2c2c2e] rounded-full px-4 py-1.5 text-xs font-bold text-gray-400 flex items-center gap-2">
+                     <div className="bg-gray-100 dark:bg-[#1c1c1e] border border-gray-300 dark:border-[#2c2c2e] rounded-full px-4 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-2">
                          <span>{activeProject.emoji}</span>
                          <span>Using context: {activeProject.title}</span>
                      </div>
@@ -315,16 +315,16 @@ export default function SearchInterface({
                      {/* USER MESSAGE */}
                      {msg.role === 'user' && (
                         <div className="max-w-[85%] animate-slide-up">
-                             <div className="text-[28px] font-medium text-white leading-tight tracking-tight mb-2">
+                             <div className="text-[28px] font-medium text-gray-900 dark:text-white leading-tight tracking-tight mb-2">
                                  {msg.content}
                              </div>
                              {msg.attachments && msg.attachments.length > 0 && (
                                 <div className="flex gap-2 mt-2 justify-end flex-wrap">
                                     {msg.attachments.map(att => (
                                         att.type === 'image' ? (
-                                            <img key={att.id} src={att.url} className="w-16 h-16 rounded-lg object-cover border border-gray-800" />
+                                            <img key={att.id} src={att.url} className="w-16 h-16 rounded-lg object-cover border border-gray-300 dark:border-gray-800" />
                                         ) : (
-                                            <div key={att.id} className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">📎 {att.name}</div>
+                                            <div key={att.id} className="text-xs bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-gray-700 dark:text-gray-300">📎 {att.name}</div>
                                         )
                                     ))}
                                 </div>
@@ -341,7 +341,7 @@ export default function SearchInterface({
                                 <div className="mb-4">
                                     <button 
                                         onClick={() => setExpandedSourceMsgId(expandedSourceMsgId === msg.timestamp ? null : msg.timestamp)}
-                                        className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-streekx-primary transition-colors bg-[#1c1c1e] px-3 py-1.5 rounded-full border border-[#2c2c2e]"
+                                        className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-500 hover:text-streekx-primary transition-colors bg-gray-100 dark:bg-[#1c1c1e] px-3 py-1.5 rounded-full border border-gray-300 dark:border-[#2c2c2e]"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
                                         {expandedSourceMsgId === msg.timestamp ? 'Hide Sources' : `View ${msg.sources.length} Sources`}
@@ -356,14 +356,14 @@ export default function SearchInterface({
                                                     href={source.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex-shrink-0 w-40 p-3 bg-[#1c1c1e] rounded-xl border border-[#2c2c2e] hover:border-gray-600 transition-all group flex flex-col justify-between h-24"
+                                                    className="flex-shrink-0 w-40 p-3 bg-gray-100 dark:bg-[#1c1c1e] rounded-xl border border-gray-300 dark:border-[#2c2c2e] hover:border-gray-400 dark:hover:border-gray-600 transition-all group flex flex-col justify-between h-24"
                                                 >
-                                                    <div className="text-[11px] font-bold text-gray-300 line-clamp-2 leading-snug group-hover:text-streekx-primary transition-colors">
+                                                    <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300 line-clamp-2 leading-snug group-hover:text-streekx-primary transition-colors">
                                                         {source.title}
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-2">
                                                         {source.favicon && <img src={source.favicon} className="w-4 h-4 rounded-full" onError={(e) => (e.currentTarget.style.display = 'none')} />}
-                                                        <div className="text-[10px] text-gray-500 truncate">{source.source}</div>
+                                                        <div className="text-[10px] text-gray-600 dark:text-gray-500 truncate">{source.source}</div>
                                                     </div>
                                                 </a>
                                             ))}
@@ -389,15 +389,15 @@ export default function SearchInterface({
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-sm font-bold text-white">StreekX Answer</span>
-                                        {activeProject && <span className="text-[10px] bg-gray-800 px-1.5 py-0.5 rounded text-gray-400">Context-Aware</span>}
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white">StreekX Answer</span>
+                                        {activeProject && <span className="text-[10px] bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-400">Context-Aware</span>}
                                         {searchMode === 'Pro' && <span className="text-[10px] bg-streekx-primary text-white px-1.5 py-0.5 rounded font-bold">PRO</span>}
                                     </div>
-                                    <div className="text-[16px] leading-7 text-gray-300 font-normal markdown-content">
+                                    <div className="text-[16px] leading-7 text-gray-700 dark:text-gray-300 font-normal markdown-content">
                                         {msg.content ? (
                                             renderMarkdownWithCitations(msg.content, msg.sources)
                                         ) : (
-                                            !currentStatus && <span className="text-gray-600 italic">Thinking...</span>
+                                            !currentStatus && <span className="text-gray-500 dark:text-gray-600 italic">Thinking...</span>
                                         )}
                                     </div>
                                 </div>
@@ -410,15 +410,15 @@ export default function SearchInterface({
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 bg-[#000000]">
+        <div className="p-4 bg-white dark:bg-[#000000]">
              {/* Mode Selector Popover (Bottom Up in Chat) */}
              {showModeSelector && (
-                 <div className="absolute bottom-20 left-4 bg-[#1c1c1e] rounded-2xl border border-[#2c2c2e] shadow-2xl p-2 w-48 animate-slide-up z-30">
+                 <div className="absolute bottom-20 left-4 bg-gray-100 dark:bg-[#1c1c1e] rounded-2xl border border-gray-300 dark:border-[#2c2c2e] shadow-2xl p-2 w-48 animate-slide-up z-30">
                      {['Standard', 'Pro', 'Research', 'Labs'].map((m) => (
                          <button 
                             key={m} 
                             onClick={() => { setSearchMode(m as SearchMode); setShowModeSelector(false); }}
-                            className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex justify-between items-center ${searchMode === m ? 'bg-streekx-primary text-white' : 'text-gray-400 hover:bg-[#2c2c2e] hover:text-white'}`}
+                            className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex justify-between items-center ${searchMode === m ? 'bg-streekx-primary text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2c2c2e] hover:text-gray-900 dark:hover:text-white'}`}
                          >
                              {m}
                              {searchMode === m && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>}
@@ -433,22 +433,22 @@ export default function SearchInterface({
                     {attachments.map(att => (
                         <div key={att.id} className="relative group flex-shrink-0 animate-fade-in">
                              {att.type === 'image' ? (
-                                <img src={att.url} className="w-12 h-12 object-cover rounded-lg border border-gray-600" />
+                                <img src={att.url} className="w-12 h-12 object-cover rounded-lg border border-gray-300 dark:border-gray-600" />
                             ) : (
-                                <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-600">📄</div>
+                                <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-300 dark:border-gray-600">📄</div>
                             )}
-                            <button onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))} className="absolute -top-1 -right-1 bg-gray-700 rounded-full w-4 h-4 flex items-center justify-center text-[10px] text-white">✕</button>
+                            <button onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))} className="absolute -top-1 -right-1 bg-gray-500 dark:bg-gray-700 rounded-full w-4 h-4 flex items-center justify-center text-[10px] text-white">✕</button>
                         </div>
                     ))}
                 </div>
             )}
 
-            <div className="bg-[#1c1c1e] rounded-[2rem] border border-[#2c2c2e] focus-within:border-gray-500 transition-colors flex items-center p-2 relative shadow-lg">
+            <div className="bg-gray-100 dark:bg-[#1c1c1e] rounded-[2rem] border border-gray-300 dark:border-[#2c2c2e] focus-within:border-gray-400 dark:focus-within:border-gray-500 transition-colors flex items-center p-2 relative shadow-lg">
                 
                 {/* Mode Icon (Left) */}
                 <button 
                     onClick={(e) => { e.stopPropagation(); setShowModeSelector(!showModeSelector); }} 
-                    className="p-3 text-gray-500 hover:text-white rounded-full transition-colors"
+                    className="p-3 text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors"
                 >
                      {searchMode === 'Pro' ? <span className="text-[10px] bg-streekx-primary text-white px-1 rounded font-bold">PRO</span> : 
                       searchMode === 'Research' ? '⚡️' :
@@ -461,11 +461,11 @@ export default function SearchInterface({
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => { if(e.key === 'Enter') handleSend(); }}
                     placeholder="Ask follow-up..." 
-                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 ml-2"
+                    className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500 ml-2"
                 />
 
                 {/* Attach/Sources Icon (Right) - Now Toggles Full Modal */}
-                <button onClick={() => setShowSources(true)} className="p-2 text-gray-500 hover:text-streekx-primary hover:bg-streekx-primary/10 rounded-full transition-all mr-1">
+                <button onClick={() => setShowSources(true)} className="p-2 text-gray-600 dark:text-gray-500 hover:text-streekx-primary hover:bg-streekx-primary/10 rounded-full transition-all mr-1">
                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                 </button>
                 
@@ -488,12 +488,12 @@ export default function SearchInterface({
                         onClick={onOpenAssistant} 
                         className="p-1.5 rounded-full transition-transform active:scale-95 hover:opacity-80"
                     >
-                        <div className="w-8 h-8 rounded-full bg-[#00c2cb] flex items-center justify-center gap-[3px]">
-                            <div className="w-[3px] bg-[#1c1c1e] rounded-full animate-wave-1"></div>
-                            <div className="w-[3px] bg-[#1c1c1e] rounded-full animate-wave-2"></div>
-                            <div className="w-[3px] bg-[#1c1c1e] rounded-full animate-wave-3"></div>
-                            <div className="w-[3px] bg-[#1c1c1e] rounded-full animate-wave-2"></div>
-                            <div className="w-[3px] bg-[#1c1c1e] rounded-full animate-wave-1"></div>
+                        <div className="w-8 h-8 rounded-full bg-streekx-primary flex items-center justify-center gap-[3px]">
+                            <div className="w-[3px] bg-white rounded-full animate-wave-1"></div>
+                            <div className="w-[3px] bg-white rounded-full animate-wave-2"></div>
+                            <div className="w-[3px] bg-white rounded-full animate-wave-3"></div>
+                            <div className="w-[3px] bg-white rounded-full animate-wave-2"></div>
+                            <div className="w-[3px] bg-white rounded-full animate-wave-1"></div>
                         </div>
                     </button>
                 )}

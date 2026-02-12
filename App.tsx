@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { AppState, Screen, UserProfile, WeatherData, ChatMessage, SearchSession, Project, Workspace, Attachment, SearchMode, SourceFlags } from './types';
 import { supabase, authService, db } from './services/supabase';
 import { getWeather } from './services/weather';
+import { useTheme } from './context/ThemeContext';
 import Home from './components/Home';
 import Auth from './components/Auth';
 import Intro from './components/Intro';

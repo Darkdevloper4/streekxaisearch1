@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage, SearchResult, SearchMode, SourceFlags, Attachment } from "../types";
-import { performWebSearch } from "./search";
+import { performWebSearch, searchWikipedia } from "./search";
 
 // --- CONFIG ---
 const HARDCODED_KEY = "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";
@@ -196,7 +196,7 @@ export const generateSmartResponse = async (
   isVoiceContext: boolean = false
 ): Promise<string> => {
     
-    // 1. SEARCH STEP 
+    // 1. SEARCH STEP - Perplexity-like workflow
     let shouldSearch = true;
     if (isVoiceContext && query.length < 10 && !query.toLowerCase().includes('who') && !query.toLowerCase().includes('what')) {
         shouldSearch = false;
@@ -210,21 +210,39 @@ export const generateSmartResponse = async (
     const languageInstruction = userLanguage !== 'Automatic' ? `IMPORTANT: Respond in ${userLanguage} language.` : '';
 
     if (shouldSearch) {
-        onStatusUpdate(searchMode === 'Research' ? "Conducting deep research..." : "Searching the web...");
+        // Step 1: Search DuckDuckGo
+        onStatusUpdate("Searching the web...");
         try {
             searchResults = await performWebSearch(query, sourceFlags);
         } catch (e) {
-            console.warn("Search step failed, proceeding without sources", e);
+            console.warn("Web search failed", e);
         }
+
+        // Step 2: Augment with Wikipedia if research mode or if we need more context
+        if (searchMode === 'Research' || searchResults.length === 0) {
+            onStatusUpdate("Checking Wikipedia...");
+            try {
+                const wikiResults = await searchWikipedia(query);
+                // Combine results (Wikipedia first if in research mode, otherwise DuckDuckGo first)
+                searchResults = searchMode === 'Research' 
+                    ? [...wikiResults.slice(0, 2), ...searchResults.slice(0, 3)]
+                    : [...searchResults.slice(0, 3), ...wikiResults.slice(0, 2)];
+            } catch (e) {
+                console.warn("Wikipedia search failed", e);
+            }
+        }
+
+        // Limit to top 5-6 sources for better context window management
+        searchResults = searchResults.slice(0, 6);
         onSourcesFound(searchResults);
     }
 
     // 2. REASONING PREP
-    if (shouldSearch) {
+    if (shouldSearch && searchResults.length > 0) {
         onStatusUpdate("Reading sources...");
-        await new Promise(r => setTimeout(r, 400)); 
+        await new Promise(r => setTimeout(r, 300)); 
     }
-    onStatusUpdate(searchMode === 'Pro' ? "Reasoning..." : "Generating answer...");
+    onStatusUpdate(searchMode === 'Pro' ? "Synthesizing..." : "Generating answer...");
 
     // Construct Context Blob
     const sourcesText = searchResults.length > 0 
@@ -275,20 +293,29 @@ export const generateSmartResponse = async (
         }
     }
 
-    const systemPrompt = `You are StreekX, a real-time AI search engine. 
+    const systemPrompt = `You are StreekX, a real-time AI search engine powered by web and Wikipedia searches.
     Current Date: ${today}.
     ${modeInstruction}
     ${languageInstruction}
     
-    Your goal is to answer the user's query using the provided Search Results and any images provided.
+    Your goal is to SYNTHESIZE and REWRITE the provided search results into a comprehensive, natural answer to the user's query.
+    Do NOT simply repeat the search results. Instead, combine them intelligently to create a coherent response.
+    
+    WORKFLOW:
+    1. Read the search results below
+    2. Extract key information relevant to the query
+    3. Synthesize into a natural, flowing answer
+    4. Add citations to credible sources
+    5. Fill gaps with your knowledge if needed
     
     RULES:
-    1. **Citations**: ${isVoiceContext ? "NO CITATIONS." : "You MUST cite your sources inline using brackets like [1], [2]."}
-    2. **Tone**: ${isVoiceContext ? "Spoken, casual, natural." : "Professional, direct."}
-    3. **Format**: ${isVoiceContext ? "Plain text." : "Markdown."}
-    4. **Context**: ${projectContext || "None"}
+    1. **Citations**: ${isVoiceContext ? "NO CITATIONS." : "You MUST cite your sources inline using brackets like [1], [2]. Number them in order of appearance."}
+    2. **Tone**: ${isVoiceContext ? "Spoken, casual, natural." : "Professional, helpful, and conversational."}
+    3. **Format**: ${isVoiceContext ? "Plain text." : "Markdown with proper formatting."}
+    4. **Synthesis**: Rewrite and combine information from sources, don't quote directly
+    5. **Context**: ${projectContext || "None"}
     
-    SEARCH RESULTS TO USE:
+    SEARCH RESULTS TO SYNTHESIZE:
     ${sourcesText}
     `;
 

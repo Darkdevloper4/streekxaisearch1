@@ -1,6 +1,34 @@
 
 import { SearchResult, SourceFlags } from "../types";
 
+// Wikipedia Search Function
+export const searchWikipedia = async (query: string): Promise<SearchResult[]> => {
+    try {
+        const response = await fetch(
+            `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=5`
+        );
+        
+        if (!response.ok) throw new Error('Wikipedia API failed');
+        
+        const data = await response.json();
+        
+        if (!data.query?.search || data.query.search.length === 0) {
+            return [];
+        }
+        
+        return data.query.search.map((item: any) => ({
+            title: item.title,
+            url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
+            snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, ''), // Strip HTML tags
+            source: 'wikipedia.org',
+            favicon: 'https://en.wikipedia.org/static/favicon/wikipedia.ico'
+        }));
+    } catch (error) {
+        console.warn("Wikipedia search failed:", error);
+        return [];
+    }
+};
+
 // Helper to generate consistent fallback data when scraping fails
 const getFallbackResults = (query: string): SearchResult[] => {
     return [
