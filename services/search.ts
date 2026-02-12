@@ -71,7 +71,16 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
         // 2. Route through AllOrigins (CORS Proxy)
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}&t=${Date.now()}`;
         
-        const response = await fetch(proxyUrl);
+        // Add 15 second timeout for search
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        
+        let response;
+        try {
+            response = await fetch(proxyUrl, { signal: controller.signal });
+        } finally {
+            clearTimeout(timeout);
+        }
         
         if (!response.ok) {
             throw new Error(`Proxy returned ${response.status}`);
@@ -128,8 +137,18 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
 
         return results;
 
-    } catch (error) {
-        console.warn("Search API Error (using fallback):", error);
+    } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        
+        // Only log as warning for expected failures
+        if (errorMsg.includes("abort") || errorMsg.includes("timeout")) {
+            console.warn("Search timeout - using fallback results");
+        } else if (errorMsg.includes("Proxy") || errorMsg.includes("CORS")) {
+            console.warn("Search proxy unavailable - using fallback results");
+        } else {
+            console.warn("Search API Error (using fallback):", error);
+        }
+        
         return getFallbackResults(query);
     }
 };

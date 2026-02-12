@@ -4,7 +4,9 @@ import { ChatMessage, SearchResult, SearchMode, SourceFlags, Attachment } from "
 import { performWebSearch } from "./search";
 
 // --- CONFIG ---
-const HARDCODED_KEY = "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";
+// NOTE: This key should be replaced with your own valid Groq API key
+// Get one at: https://console.groq.com/keys
+const HARDCODED_KEY = process.env.GROQ_API_KEY || "";
 
 const getSettings = () => {
     const saved = localStorage.getItem('streekx_settings');
@@ -125,25 +127,46 @@ const generateGroqResponse = async (
         model = 'llama-3.3-70b-versatile'; 
     }
 
-    // 3. Fetch
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model,
-            messages,
-            stream: true,
-            temperature: isVoiceContext ? 0.6 : 0.7,
-            max_tokens: isVoiceContext ? 250 : 4096
-        })
-    });
+    // 3. Fetch with timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    
+    let response;
+    try {
+        response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                stream: true,
+                temperature: isVoiceContext ? 0.6 : 0.7,
+                max_tokens: isVoiceContext ? 250 : 4096
+            }),
+            signal: controller.signal
+        });
+    } finally {
+        clearTimeout(timeout);
+    }
 
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Groq API Error: ${err.error?.message || response.statusText}`);
+        let errMsg = response.statusText;
+        try {
+            const err = await response.json();
+            errMsg = err.error?.message || response.statusText;
+        } catch (e) {}
+        
+        if (response.status === 401) {
+            throw new Error("Invalid API Key. Please check your Groq API key configuration.");
+        } else if (response.status === 429) {
+            throw new Error("API rate limit exceeded. Please try again later.");
+        } else if (response.status >= 500) {
+            throw new Error("Groq API service is unavailable. Please try again later.");
+        }
+        throw new Error(`Groq API Error: ${errMsg}`);
     }
 
     // 4. Handle Streaming (SSE)
@@ -293,10 +316,11 @@ export const generateSmartResponse = async (
     `;
 
     // Prioritize Env Key, then Fallback Key
-    const apiKey = process.env.API_KEY || HARDCODED_KEY;
+    const apiKey = process.env.GROQ_API_KEY || process.env.API_KEY || HARDCODED_KEY;
     
-    if (!apiKey) {
-        const err = "Configuration Error: API Key missing.";
+    if (!apiKey || apiKey.trim() === "") {
+        const err = "Configuration Error: No API Key found. Please set GROQ_API_KEY in your environment variables or use Gemini with GOOGLE_API_KEY.";
+        console.error(err);
         onChunk(err);
         return err;
     }
@@ -365,8 +389,20 @@ export const generateSmartResponse = async (
 
     } catch (e: any) {
         console.error("AI Generation Error:", e);
-        const errText = "I'm having trouble connecting right now. Please check your connection.";
-        onChunk(errText);
-        return errText;
+        
+        let userMessage = "I'm having trouble connecting right now.";
+        
+        if (e.message?.includes("API Key")) {
+            userMessage = "Please configure a valid API key (GROQ_API_KEY or GOOGLE_API_KEY).";
+        } else if (e.message?.includes("rate limit") || e.message?.includes("429")) {
+            userMessage = "Too many requests. Please try again in a moment.";
+        } else if (e.message?.includes("unavailable") || e.message?.includes("500")) {
+            userMessage = "The AI service is temporarily unavailable. Please try again shortly.";
+        } else if (e.message?.includes("timeout") || e.message?.includes("abort")) {
+            userMessage = "Request timed out. Please try with a shorter query.";
+        }
+        
+        onChunk(userMessage);
+        return userMessage;
     }
 };
