@@ -34,9 +34,18 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       // Tailwind uses the 'dark' class
       if (finalTheme === 'dark') {
           root.classList.add('dark');
+          root.classList.remove('light');
+          document.body.style.backgroundColor = '#000000';
+          document.body.style.color = '#ffffff';
       } else {
+          root.classList.add('light');
           root.classList.remove('dark');
+          document.body.style.backgroundColor = '#ffffff';
+          document.body.style.color = '#000000';
       }
+      
+      // Update data-theme attribute for CSS variable switching if needed
+      root.setAttribute('data-theme', finalTheme);
       
       // Optional: Update meta theme-color for mobile browsers
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');

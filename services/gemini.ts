@@ -241,38 +241,18 @@ export const generateSmartResponse = async (
         **VOICE MODE ACTIVE**:
         - You are StreekX, a helpful, witty, and intelligent voice assistant.
         - Your responses will be spoken out loud. 
-        - Keep answers SHORT, CONCISE, and CONVERSATIONAL (aim for 1-2 sentences for simple questions).
+        - Keep answers SHORT, CONCISE, and CONVERSATIONAL.
         - Do NOT use Markdown formatting (no bold, no asterisks, no links).
         - Do NOT use citations like [1].
-        - Be direct. Do not say "Based on the search results". Just answer.
         `;
     } else {
-        switch (searchMode) {
-            case 'Pro':
-                modeInstruction = `
-                **PRO MODE ACTIVE**:
-                - Provide a highly detailed, extensive answer.
-                - Use advanced reasoning.
-                - Break down complex topics.
-                `;
-                break;
-            case 'Research':
-                modeInstruction = `
-                **RESEARCH MODE ACTIVE**:
-                - Focus strictly on academic, factual, and data-driven information.
-                - Structure the output like a research summary.
-                `;
-                break;
-            case 'Labs':
-                modeInstruction = `
-                **LABS MODE ACTIVE**:
-                - Be creative, experimental, and think outside the box.
-                - Provide code snippets if applicable.
-                `;
-                break;
-            default:
-                modeInstruction = "Provide a direct, helpful, and professional answer.";
-        }
+        modeInstruction = `
+        **PERPLEXITY-STYLE WORKFLOW ACTIVE**:
+        - You are a real-time AI search engine.
+        - Use the provided search results to construct a comprehensive, accurate answer.
+        - REWRITE the information in your own words while maintaining factual accuracy.
+        - Cite your sources inline using brackets like [1], [2].
+        `;
     }
 
     const systemPrompt = `You are StreekX, a real-time AI search engine. 
@@ -284,8 +264,8 @@ export const generateSmartResponse = async (
     
     RULES:
     1. **Citations**: ${isVoiceContext ? "NO CITATIONS." : "You MUST cite your sources inline using brackets like [1], [2]."}
-    2. **Tone**: ${isVoiceContext ? "Spoken, casual, natural." : "Professional, direct."}
-    3. **Format**: ${isVoiceContext ? "Plain text." : "Markdown."}
+    2. **Tone**: Professional, direct.
+    3. **Format**: Markdown.
     4. **Context**: ${projectContext || "None"}
     
     SEARCH RESULTS TO USE:
