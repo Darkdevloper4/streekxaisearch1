@@ -89,7 +89,7 @@ const SettingRow = ({ label, value, onClick, action, isDestructive = false }: { 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean, onChange: (v: boolean) => void }) => (
     <button 
         onClick={(e) => { e.stopPropagation(); onChange(!enabled); }} 
-        className={`w-[52px] h-[32px] rounded-full p-1 transition-all duration-300 relative focus:outline-none ${enabled ? 'bg-streekx-primary' : 'bg-gray-300 dark:bg-[#3a3a3c]'}`}
+        className={`w-[52px] h-[32px] rounded-full p-1 transition-all duration-300 relative focus:outline-none ${enabled ? 'bg-streekx-primary' : 'bg-gray-200 dark:bg-[#3a3a3c]'}`}
     >
         <div className={`w-[24px] h-[24px] bg-white rounded-full shadow-lg transform transition-transform duration-300 ${enabled ? 'translate-x-[20px]' : 'translate-x-0'}`}></div>
     </button>
@@ -110,8 +110,8 @@ const SelectionScreen = ({ title, options, selectedValue, onSelect, onBack, type
     };
 
     return (
-        <div className="h-full bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
-            <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-gray-50 dark:bg-[#000000] sticky top-0 z-20">
+        <div className="h-full bg-white dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
+            <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-white dark:bg-[#000000] sticky top-0 z-20">
                 <button onClick={onBack} className="p-2 -ml-2 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
@@ -158,8 +158,8 @@ const SelectionScreen = ({ title, options, selectedValue, onSelect, onBack, type
 };
 
 const PersonalizeScreen = ({ interests, onToggle, onBack }: { interests: string[], onToggle: (id: string) => void, onBack: () => void }) => (
-    <div className="h-full bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
-        <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-gray-50 dark:bg-[#000000] sticky top-0 z-20">
+    <div className="h-full bg-white dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
+        <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-white dark:bg-[#000000] sticky top-0 z-20">
             <button onClick={onBack} className="p-2 -ml-2 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
@@ -188,8 +188,8 @@ const PersonalizeScreen = ({ interests, onToggle, onBack }: { interests: string[
 );
 
 const VoiceModeScreen = ({ selected, onSelect, onBack }: { selected: string, onSelect: (v: string) => void, onBack: () => void }) => (
-    <div className="h-full bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
-        <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-gray-50 dark:bg-[#000000] sticky top-0 z-20">
+    <div className="h-full bg-white dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200">
+        <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-white dark:bg-[#000000] sticky top-0 z-20">
             <button onClick={onBack} className="p-2 -ml-2 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
@@ -229,9 +229,9 @@ const CapabilitiesScreen = ({ onBack }: { onBack: () => void }) => {
     ];
 
     return (
-        <div className="h-full bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans">
+        <div className="h-full bg-white dark:bg-[#000000] flex flex-col animate-slide-right font-sans">
             {/* Header */}
-            <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-gray-50 dark:bg-[#000000] sticky top-0 z-20">
+            <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] bg-white dark:bg-[#000000] sticky top-0 z-20">
                 <button onClick={onBack} className="p-2 -ml-2 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
@@ -285,7 +285,7 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
          voiceMode: 'FREE',
          assistantEnabled: true,
          assistantLanguage: 'English (US)',
-         accentColor: '#8d6e63',
+         accentColor: '#1d4ed8',
          interests: []
      };
   });
@@ -413,10 +413,10 @@ export default function Settings({ user, onBack, onLogout, onClearHistory, onUpd
 
   // --- MAIN RENDER ---
   return (
-    <div className="h-[100dvh] bg-gray-50 dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200 transition-colors duration-200">
+    <div className="h-[100dvh] bg-white dark:bg-[#000000] flex flex-col animate-slide-right font-sans text-gray-900 dark:text-gray-200 transition-colors duration-200">
       
       {/* Header */}
-      <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] sticky top-0 bg-gray-50 dark:bg-[#000000] z-20 flex-shrink-0">
+      <div className="flex items-center px-4 py-4 border-b border-gray-200 dark:border-[#1c1c1e] sticky top-0 bg-white dark:bg-[#000000] z-20 flex-shrink-0">
         <button onClick={onBack} className="p-2 -ml-2 text-gray-500 dark:text-gray-400 rounded-full hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#1c1c1e] transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
         </button>
