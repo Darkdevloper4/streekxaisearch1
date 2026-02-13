@@ -138,13 +138,13 @@ export default function Home({ user, weather, onSearch, onOpenProfile, searchHis
   // --- COMPONENTS ---
 
   const ToggleSwitch = ({ checked, onChange, colorClass }: { checked: boolean, onChange: (v: boolean) => void, colorClass?: string }) => (
-    <div onClick={(e) => { e.stopPropagation(); onChange(!checked); }} className={`w-[44px] h-[24px] rounded-full p-1 transition-all duration-300 relative cursor-pointer ${checked ? (colorClass || 'bg-streekx-primary') : 'bg-gray-300 dark:bg-[#3a3a3c]'}`}>
+    <div onClick={(e) => { e.stopPropagation(); onChange(!checked); }} className={`w-[44px] h-[24px] rounded-full p-1 transition-all duration-300 relative cursor-pointer ${checked ? (colorClass || 'bg-streekx-primary') : 'bg-gray-200 dark:bg-[#3a3a3c]'}`}>
         <div className={`w-[16px] h-[16px] bg-white rounded-full shadow-md transform transition-transform duration-300 ${checked ? 'translate-x-[20px]' : 'translate-x-0'}`}></div>
     </div>
   );
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-gray-50 dark:bg-[#000000] relative overflow-hidden text-gray-900 dark:text-white font-sans transition-colors duration-200" onClick={() => { setIsFocused(false); setIsMenuOpen(false); }}>
+    <div className="h-[100dvh] flex flex-col bg-white dark:bg-[#000000] relative overflow-hidden text-gray-900 dark:text-white font-sans transition-colors duration-200" onClick={() => { setIsFocused(false); setIsMenuOpen(false); }}>
       
       {/* MODE SELECTOR MODAL */}
       {showModeSelector && (
@@ -287,7 +287,7 @@ export default function Home({ user, weather, onSearch, onOpenProfile, searchHis
       {isMenuOpen && (
         <>
            <div className="absolute inset-0 bg-black/60 z-40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
-           <div className="absolute top-0 left-0 bottom-0 w-72 bg-gray-50 dark:bg-[#1c1c1e] z-50 shadow-2xl animate-slide-right flex flex-col p-6 border-r border-gray-200 dark:border-[#2c2c2e]">
+           <div className="absolute top-0 left-0 bottom-0 w-72 bg-white dark:bg-[#1c1c1e] z-50 shadow-2xl animate-slide-right flex flex-col p-6 border-r border-gray-200 dark:border-[#2c2c2e]">
                 <div className="flex items-center gap-3 mb-10">
                      <div className="w-10 h-10 bg-streekx-primary rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">S</div>
                      <span className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">StreekX</span>
@@ -338,7 +338,7 @@ export default function Home({ user, weather, onSearch, onOpenProfile, searchHis
             </div>
 
             {weather && (
-            <div className="flex items-center gap-2 text-gray-500 mb-4 font-semibold bg-gray-100 dark:bg-[#1c1c1e] px-4 py-1 rounded-full border border-gray-200 dark:border-[#2c2c2e] text-xs">
+            <div className="flex items-center gap-2 text-gray-500 mb-4 font-semibold bg-white dark:bg-[#1c1c1e] px-4 py-1 rounded-full border border-gray-200 dark:border-[#2c2c2e] text-xs">
                 <span>{weather.condition}, {weather.temp}°</span>
             </div>
             )}
