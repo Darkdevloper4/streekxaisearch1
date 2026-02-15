@@ -155,6 +155,7 @@ export default function SearchResults({
   const performSearch = async (query: string) => {
     setIsLoading(true);
     setAiAnswer(''); // Reset answer
+    setAnswerLoading(false); // Reset loading state
     try {
       const mockResults: SearchResult[] = [
         {
@@ -235,10 +236,27 @@ export default function SearchResults({
         onUpdateSession(sessionId, { allResults: mockResults });
       });
 
-      // Generate AI answer
-      await generateAiAnswer(query);
+      // Generate AI answer only if we have results
+      // Skip if search just completed to avoid overloading APIs
+      if (mockResults.length > 0) {
+        // Defer AI generation slightly to prevent overwhelming APIs
+        setTimeout(() => {
+          generateAiAnswer(query);
+        }, 500);
+      }
     } catch (error) {
       console.error("Search failed", error);
+      // Still show fallback results even if search fails
+      const fallbackResults: SearchResult[] = [
+        {
+          title: "Search Error",
+          url: "#",
+          snippet: "Unable to fetch search results. Showing suggestions instead.",
+          source: "local",
+          type: "web"
+        }
+      ];
+      setAllResults(fallbackResults);
     } finally {
       setIsLoading(false);
     }
@@ -262,20 +280,12 @@ export default function SearchResults({
         'Standard'
       );
     } catch (error: any) {
-      console.error("Failed to generate answer", error);
-
-      // Check if it's a quota error
       const errorMessage = error?.message || error?.toString() || '';
-      if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
-        // Silently skip AI answer on quota error
-        setAiAnswer('');
-      } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
-        // Silently skip AI answer on network error
-        setAiAnswer('');
-      } else {
-        // For other errors, show a message
-        setAiAnswer("Unable to generate an answer at this time.");
-      }
+      console.warn("AI answer generation failed:", errorMessage);
+
+      // Silently skip AI answer on any error - results are already displayed
+      // This prevents the entire search from failing due to API issues
+      setAiAnswer('');
     } finally {
       setAnswerLoading(false);
     }

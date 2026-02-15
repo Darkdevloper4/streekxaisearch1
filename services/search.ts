@@ -103,9 +103,21 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}&t=${Date.now()}`;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
-        const response = await fetch(proxyUrl, { signal: controller.signal });
+        let response;
+        try {
+          response = await fetch(proxyUrl, { signal: controller.signal });
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          // Handle abort and network errors gracefully
+          if (fetchError.name === 'AbortError') {
+            console.warn("Search request timeout, using fallback.");
+            return getFallbackResults(query);
+          }
+          throw fetchError;
+        }
+
         clearTimeout(timeoutId);
 
         if (!response.ok) {
