@@ -130,16 +130,21 @@ export default function SearchResults({
   const [allResults, setAllResults] = useState<SearchResult[]>(session?.allResults || []);
   const [answerLoading, setAnswerLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasExecutedInitial = useRef(false);
 
   // Execute initial search
   useEffect(() => {
-    if (initialQuery && !session?.allResults) {
-      performSearch(initialQuery);
-    } else if (session?.allResults) {
-      setAllResults(session.allResults);
-      if (session.currentFilter) setCurrentFilter(session.currentFilter);
+    if (initialQuery && !hasExecutedInitial.current) {
+      if (!session?.allResults) {
+        hasExecutedInitial.current = true;
+        performSearch(initialQuery);
+      } else if (session?.allResults) {
+        hasExecutedInitial.current = true;
+        setAllResults(session.allResults);
+        if (session.currentFilter) setCurrentFilter(session.currentFilter);
+      }
     }
-  }, [initialQuery]);
+  }, []);
 
   const performSearch = async (query: string) => {
     setIsLoading(true);
@@ -215,9 +220,13 @@ export default function SearchResults({
           reviews: 256
         }
       ];
-      
+
       setAllResults(mockResults);
-      onUpdateSession(sessionId, { allResults: mockResults });
+
+      // Defer parent state update to avoid React update conflicts
+      Promise.resolve().then(() => {
+        onUpdateSession(sessionId, { allResults: mockResults });
+      });
 
       // Generate AI answer
       await generateAiAnswer(query);
@@ -232,16 +241,17 @@ export default function SearchResults({
     setAnswerLoading(true);
     try {
       let answer = "";
+      const projectPrompt = activeProject?.ai_prompt;
       await generateSmartResponse(
         query,
         [],
-        (status) => console.log(status),
-        (sources) => console.log(sources),
+        (status) => {},
+        (sources) => {},
         (chunk) => {
           answer = chunk;
           setAiAnswer(answer);
         },
-        activeProject?.ai_prompt,
+        projectPrompt,
         'Standard'
       );
     } catch (error) {
