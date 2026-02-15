@@ -103,22 +103,20 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}&t=${Date.now()}`;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, 8000); // 8 second timeout
 
         let response;
         try {
           response = await fetch(proxyUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
         } catch (fetchError: any) {
           clearTimeout(timeoutId);
-          // Handle abort and network errors gracefully
-          if (fetchError.name === 'AbortError') {
-            console.warn("Search request timeout, using fallback.");
-            return getFallbackResults(query);
-          }
-          throw fetchError;
+          // Always return fallback on fetch errors - timeout, abort, network, etc
+          console.warn("Fetch error during search, using fallback:", fetchError?.message || fetchError?.name);
+          return getFallbackResults(query);
         }
-
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`Proxy returned ${response.status}`);
@@ -177,9 +175,11 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
 
         return results;
 
-    } catch (error) {
-        console.warn("Search API Error (using fallback):", error);
+    } catch (error: any) {
+        const errorMessage = error?.message || error?.toString() || '';
+        console.warn("Search API Error (using fallback):", errorMessage);
         // Always return fallback results on any error (network, timeout, parsing, etc)
+        // This includes AbortError, network errors, and parsing failures
         return getFallbackResults(query);
     }
 };
