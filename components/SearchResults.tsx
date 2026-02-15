@@ -360,34 +360,17 @@ export default function SearchResults({
 
   return (
     <div className="flex flex-col h-full bg-black text-white font-sans relative">
-      {/* Top Bar */}
+      {/* Top Bar - Simple */}
       <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-4">
         <button
           onClick={onBack}
-          className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 hover:text-white transition-colors mb-4"
+          className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 hover:text-white transition-colors mb-3"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        
-        {/* Search Display */}
-        <h1 className="text-2xl font-bold text-white mb-3">{initialQuery}</h1>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 no-scrollbar">
-          {(['All', 'Images', 'Videos', 'Maps', 'Shopping'] as SearchFilter[]).map(filter => (
-            <button
-              key={filter}
-              onClick={() => setCurrentFilter(filter)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap font-medium text-sm transition-colors ${
-                currentFilter === filter
-                  ? 'bg-streekx-primary text-white'
-                  : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-              }`}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
+        {/* Search Display */}
+        <h1 className="text-xl font-bold text-white">{initialQuery}</h1>
       </div>
 
       {/* Results Area */}
@@ -405,11 +388,30 @@ export default function SearchResults({
         )}
       </div>
 
-      {/* Bottom Search Bar */}
-      <div className="sticky bottom-0 z-20 bg-black border-t border-gray-800 p-4">
+      {/* Bottom Section - Filters, Search Bar, and Create Thread */}
+      <div className="sticky bottom-0 z-20 bg-black border-t border-gray-800 p-4 space-y-3">
+
+        {/* Filter Tabs - Above Search Bar */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar">
+          {(['All', 'Images', 'Videos', 'Maps', 'Shopping'] as SearchFilter[]).map(filter => (
+            <button
+              key={filter}
+              onClick={() => setCurrentFilter(filter)}
+              className={`px-4 py-2 rounded-full whitespace-nowrap font-medium text-sm transition-colors ${
+                currentFilter === filter
+                  ? 'bg-streekx-primary text-white'
+                  : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+
+        {/* Search Bar */}
         <form onSubmit={handleSearch} className="bg-gray-900 rounded-full border border-gray-800 focus-within:border-gray-600 transition-colors flex items-center px-4 py-3 relative shadow-lg">
           <svg className="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          
+
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -442,10 +444,10 @@ export default function SearchResults({
               onUpdateSession(sessionId, { allResults, currentFilter });
               onCreateThread(sessionId);
             }}
-            className="w-full mt-4 bg-streekx-primary text-white font-bold py-3 rounded-full hover:bg-streekx-primaryDark transition-colors active:scale-95 flex items-center justify-center gap-2"
+            className="w-full bg-streekx-primary text-white font-bold py-3 rounded-full hover:bg-streekx-primaryDark transition-colors active:scale-95 flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14"></path></svg>
-            Create Thread & Chat
+            Create Thread
           </button>
         )}
       </div>
