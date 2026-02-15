@@ -360,17 +360,19 @@ export default function SearchResults({
 
   return (
     <div className="flex flex-col h-full bg-black text-white font-sans relative">
-      {/* Top Bar - Simple */}
-      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-4">
+      {/* Top Bar */}
+      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-4 flex items-center justify-between">
         <button
           onClick={onBack}
-          className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 hover:text-white transition-colors mb-3"
+          className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        {/* Search Display */}
-        <h1 className="text-xl font-bold text-white">{initialQuery}</h1>
+        {/* StreekX Title */}
+        <span className="font-bold text-sm tracking-widest text-streekx-primary uppercase opacity-80">StreekX AI</span>
+
+        <div className="w-10"></div>
       </div>
 
       {/* Results Area */}
@@ -388,24 +390,41 @@ export default function SearchResults({
         )}
       </div>
 
-      {/* Bottom Section - Filters, Search Bar, and Create Thread */}
+      {/* Bottom Section - Filters, Search Bar */}
       <div className="sticky bottom-0 z-20 bg-black border-t border-gray-800 p-4 space-y-3">
 
-        {/* Filter Tabs - Above Search Bar */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar">
-          {(['All', 'Images', 'Videos', 'Maps', 'Shopping'] as SearchFilter[]).map(filter => (
+        {/* Filter Tabs with Create Thread Icon on Left */}
+        <div className="flex gap-2 items-center overflow-x-auto pb-2">
+          {/* Create Thread Icon Button */}
+          {allResults.length > 0 && (
             <button
-              key={filter}
-              onClick={() => setCurrentFilter(filter)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap font-medium text-sm transition-colors ${
-                currentFilter === filter
-                  ? 'bg-streekx-primary text-white'
-                  : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
-              }`}
+              onClick={() => {
+                onUpdateSession(sessionId, { allResults, currentFilter });
+                onCreateThread(sessionId);
+              }}
+              className="flex-shrink-0 w-10 h-10 rounded-full bg-streekx-primary hover:bg-streekx-primaryDark transition-colors flex items-center justify-center text-white"
+              title="Create Thread"
             >
-              {filter}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 5v14m-7-7h14"></path></svg>
             </button>
-          ))}
+          )}
+
+          {/* Filter Tabs */}
+          <div className="flex gap-2 overflow-x-auto -mx-2 px-2 no-scrollbar">
+            {(['All', 'Images', 'Videos', 'Maps', 'Shopping'] as SearchFilter[]).map(filter => (
+              <button
+                key={filter}
+                onClick={() => setCurrentFilter(filter)}
+                className={`px-4 py-2 rounded-full whitespace-nowrap font-medium text-sm transition-colors ${
+                  currentFilter === filter
+                    ? 'bg-streekx-primary text-white'
+                    : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -436,20 +455,6 @@ export default function SearchResults({
             </button>
           )}
         </form>
-
-        {/* Create Thread Button */}
-        {allResults.length > 0 && (
-          <button
-            onClick={() => {
-              onUpdateSession(sessionId, { allResults, currentFilter });
-              onCreateThread(sessionId);
-            }}
-            className="w-full bg-streekx-primary text-white font-bold py-3 rounded-full hover:bg-streekx-primaryDark transition-colors active:scale-95 flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14m-7-7h14"></path></svg>
-            Create Thread
-          </button>
-        )}
       </div>
     </div>
   );
