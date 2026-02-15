@@ -15,6 +15,37 @@ export interface UserProfile {
   created_at: string;
 }
 
+export type NotificationType = 'info' | 'security' | 'otp' | 'prompt';
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data?: any;
+  read: boolean;
+  created_at: string;
+}
+
+export interface SecurityPreferences {
+  user_id: string;
+  skip_password: boolean;
+  safe_browsing: boolean;
+  updated_at: string;
+}
+
+export interface DeviceSession {
+  id: string;
+  user_id: string;
+  device_name: string;
+  platform: string;
+  user_agent: string;
+  last_seen_at: string;
+  created_at: string;
+  is_lost: boolean;
+}
+
 // Project / Workspace (Perplexity Collections Style)
 export interface Project {
   id: string;
