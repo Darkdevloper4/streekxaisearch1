@@ -1,5 +1,4 @@
-
-import { SearchResult, SourceFlags } from "../types";
+import { SearchResult, SourceFlags, SearchResultType } from "../types";
 
 // Helper to generate consistent fallback data when scraping fails
 const getFallbackResults = (query: string): SearchResult[] => {
@@ -9,30 +8,62 @@ const getFallbackResults = (query: string): SearchResult[] => {
             url: `https://en.wikipedia.org/wiki/${encodeURIComponent(query)}`,
             snippet: `Encyclopedia article about ${query}. Covers history, key definitions, and general overview. (Simulated Result due to connection issues)`,
             source: 'wikipedia.org',
-            favicon: 'https://www.google.com/s2/favicons?domain=wikipedia.org&sz=64'
+            favicon: 'https://www.google.com/s2/favicons?domain=wikipedia.org&sz=64',
+            type: 'web'
         },
         {
             title: `Latest News: ${query}`,
             url: `https://news.google.com/search?q=${encodeURIComponent(query)}`,
             snippet: `Recent updates, articles, and breaking news regarding ${query} from major international sources.`,
             source: 'news.google.com',
-            favicon: 'https://www.google.com/s2/favicons?domain=news.google.com&sz=64'
+            favicon: 'https://www.google.com/s2/favicons?domain=news.google.com&sz=64',
+            type: 'web'
         },
         {
             title: `${query} - Discussion & Opinions`,
             url: `https://www.reddit.com/search/?q=${encodeURIComponent(query)}`,
             snippet: `Community discussions, reviews, and user opinions about ${query} from Reddit.`,
             source: 'reddit.com',
-            favicon: 'https://www.google.com/s2/favicons?domain=reddit.com&sz=64'
+            favicon: 'https://www.google.com/s2/favicons?domain=reddit.com&sz=64',
+            type: 'web'
         },
         {
             title: `Definition of ${query}`,
             url: `https://www.dictionary.com/browse/${encodeURIComponent(query)}`,
             snippet: `Standard definition, pronunciation, and usage examples for "${query}".`,
             source: 'dictionary.com',
-            favicon: 'https://www.google.com/s2/favicons?domain=dictionary.com&sz=64'
+            favicon: 'https://www.google.com/s2/favicons?domain=dictionary.com&sz=64',
+            type: 'web'
+        },
+        {
+            title: `${query} - Images`,
+            url: `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`,
+            snippet: `Related images for ${query}`,
+            source: 'google.com',
+            type: 'image',
+            imageUrl: `https://via.placeholder.com/400x300?text=${encodeURIComponent(query)}`
+        },
+        {
+            title: `${query} - Video Results`,
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+            snippet: `Video content related to ${query}`,
+            source: 'youtube.com',
+            type: 'video',
+            thumbnailUrl: `https://via.placeholder.com/320x180?text=Video`
         }
     ];
+};
+
+// Helper to determine result type based on domain/URL
+const detectResultType = (source: string, url: string): SearchResultType => {
+    const lowerSource = source.toLowerCase();
+
+    if (lowerSource.includes('youtube') || lowerSource.includes('vimeo') || lowerSource.includes('video')) return 'video';
+    if (lowerSource.includes('instagram') || lowerSource.includes('pinterest') || lowerSource.includes('flickr')) return 'image';
+    if (lowerSource.includes('maps') || lowerSource.includes('yelp') || lowerSource.includes('location')) return 'map';
+    if (lowerSource.includes('amazon') || lowerSource.includes('ebay') || lowerSource.includes('shop') || url.includes('price=')) return 'shopping';
+
+    return 'web';
 };
 
 export const performWebSearch = async (query: string, sourceFlags?: SourceFlags): Promise<SearchResult[]> => {
@@ -109,13 +140,15 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
                 } catch (e) {}
 
                 const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                const resultType = detectResultType(domain, rawUrl);
 
                 results.push({
                     title: (titleEl as HTMLElement).innerText.trim(),
                     url: rawUrl,
                     snippet: (snippetEl as HTMLElement).innerText.trim(),
                     source: domain,
-                    favicon: favicon
+                    favicon: favicon,
+                    type: resultType
                 });
             }
         });
