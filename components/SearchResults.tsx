@@ -129,8 +129,14 @@ export default function SearchResults({
   const [aiAnswer, setAiAnswer] = useState('');
   const [allResults, setAllResults] = useState<SearchResult[]>(session?.allResults || []);
   const [answerLoading, setAnswerLoading] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasExecutedInitial = useRef(false);
+  const recognitionRef = useRef<any>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Execute initial search
   useEffect(() => {
@@ -277,8 +283,70 @@ export default function SearchResults({
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchInput.trim()) return;
-    await performSearch(searchInput);
+    if (!searchInput.trim() && attachments.length === 0) return;
+    const txt = searchInput;
+    const atts = [...attachments];
+    setSearchInput('');
+    setAttachments([]);
+    await performSearch(txt);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          const newAtt: Attachment = {
+            id: crypto.randomUUID(),
+            type: file.type.startsWith('image') ? 'image' : 'file',
+            url: ev.target.result as string,
+            name: file.name
+          };
+          setAttachments(prev => [...prev, newAtt]);
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const startDictation = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      const savedSettings = localStorage.getItem('streekx_settings');
+      const parsedSettings = savedSettings ? JSON.parse(savedSettings) : {};
+      recognition.lang = parsedSettings.speechRecognition || 'en-US';
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => {
+        setIsListening(false);
+        recognitionRef.current = null;
+      };
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setSearchInput(prev => prev + (prev ? ' ' : '') + transcript);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } else {
+      alert("Voice input not supported in this browser.");
+    }
   };
 
   const getFilteredResults = () => {
@@ -440,17 +508,62 @@ export default function SearchResults({
           </div>
         </div>
 
+        {/* Attachments Preview */}
+        {attachments.length > 0 && (
+          <div className="flex gap-2 px-2 overflow-x-auto pb-2">
+            {attachments.map(att => (
+              <div key={att.id} className="relative group flex-shrink-0 animate-fade-in">
+                {att.type === 'image' ? (
+                  <img src={att.url} className="w-12 h-12 object-cover rounded-lg border border-gray-600" />
+                ) : (
+                  <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-lg border border-gray-600">📄</div>
+                )}
+                <button
+                  onClick={() => removeAttachment(att.id)}
+                  className="absolute -top-1 -right-1 bg-gray-700 rounded-full w-4 h-4 flex items-center justify-center text-[10px] text-white hover:bg-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="bg-gray-900 rounded-full border border-gray-800 focus-within:border-gray-600 transition-colors flex items-center px-4 py-3 relative shadow-lg">
-          <svg className="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <form onSubmit={handleSearch} className="bg-gray-900 rounded-full border border-gray-800 focus-within:border-gray-600 transition-colors flex items-center px-3 py-2.5 relative shadow-lg">
+          {/* Voice Search Button */}
+          <button
+            type="button"
+            onClick={startDictation}
+            className={`p-2 rounded-full transition-colors ${isListening ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white'}`}
+            title="Voice search"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4"></path>
+            </svg>
+          </button>
+
+          <svg className="w-5 h-5 text-gray-500 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
             placeholder="Search..."
-            className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 ml-4"
+            className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 ml-2"
           />
+
+          {/* File Upload Button */}
+          <button
+            type="button"
+            onClick={() => mediaInputRef.current?.click()}
+            className="p-2 rounded-full text-gray-400 hover:text-white transition-colors"
+            title="Upload image"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </button>
 
           {isLoading && (
             <div className="flex items-center gap-2 ml-2">
@@ -459,7 +572,7 @@ export default function SearchResults({
             </div>
           )}
 
-          {!isLoading && searchInput && (
+          {!isLoading && (searchInput.trim() || attachments.length > 0) && (
             <button
               type="submit"
               className="p-2 rounded-full ml-2 text-white bg-streekx-primary hover:opacity-80 transition-opacity"
@@ -467,6 +580,11 @@ export default function SearchResults({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
             </button>
           )}
+
+          {/* Hidden File Inputs */}
+          <input type="file" ref={mediaInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*" />
+          <input type="file" ref={cameraInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" capture="environment" />
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".pdf,.doc,.docx,.txt,.md,.csv,.json" />
         </form>
       </div>
     </div>
