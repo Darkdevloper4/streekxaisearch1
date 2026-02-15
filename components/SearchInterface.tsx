@@ -139,8 +139,28 @@ export default function SearchInterface({
             sourceFlags, // Use current source flags
             currentAttachments // Pass images if any
         );
-    } catch (e) {
+    } catch (e: any) {
         console.error("Search failed", e);
+
+        // Handle specific error types with user-friendly messages
+        const errorMessage = e?.message || e?.toString() || '';
+        let userMessage = "I'm having trouble connecting right now. Please try again later.";
+
+        if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+            userMessage = "API quota exceeded. Please try again in a few moments.";
+        } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
+            userMessage = "Network error. Please check your connection and try again.";
+        }
+
+        // Update the last message with error
+        setMessages(prev => {
+            const newMsgs = [...prev];
+            const lastMsg = newMsgs[newMsgs.length - 1];
+            if (lastMsg?.role === 'model') {
+                lastMsg.content = userMessage;
+            }
+            return newMsgs;
+        });
     } finally {
         setIsStreaming(false);
         setCurrentStatus(""); // Clear status

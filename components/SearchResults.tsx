@@ -148,6 +148,7 @@ export default function SearchResults({
 
   const performSearch = async (query: string) => {
     setIsLoading(true);
+    setAiAnswer(''); // Reset answer
     try {
       const mockResults: SearchResult[] = [
         {
@@ -254,9 +255,21 @@ export default function SearchResults({
         projectPrompt,
         'Standard'
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to generate answer", error);
-      setAiAnswer("Unable to generate an answer at this time. Please try again.");
+
+      // Check if it's a quota error
+      const errorMessage = error?.message || error?.toString() || '';
+      if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        // Silently skip AI answer on quota error
+        setAiAnswer('');
+      } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
+        // Silently skip AI answer on network error
+        setAiAnswer('');
+      } else {
+        // For other errors, show a message
+        setAiAnswer("Unable to generate an answer at this time.");
+      }
     } finally {
       setAnswerLoading(false);
     }

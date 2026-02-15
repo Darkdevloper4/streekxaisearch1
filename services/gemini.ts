@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage, SearchResult, SearchMode, SourceFlags, Attachment } from "../types";
 import { performWebSearch } from "./search";
@@ -345,7 +344,17 @@ export const generateSmartResponse = async (
 
     } catch (e: any) {
         console.error("AI Generation Error:", e);
-        const errText = "I'm having trouble connecting right now. Please check your connection.";
+
+        // Determine error type and provide appropriate message
+        const errorMessage = e?.message || e?.toString() || '';
+        let errText = "I'm having trouble connecting right now. Please try again.";
+
+        if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+            errText = "API quota exceeded. Please try again in a moment.";
+        } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
+            errText = "Network error. Please check your connection.";
+        }
+
         onChunk(errText);
         return errText;
     }

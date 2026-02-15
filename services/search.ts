@@ -73,22 +73,22 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
         // Apply Source Filters via search operators (Real-time filtering)
         if (sourceFlags) {
             const operators = [];
-            
+
             // ACADEMIC: .edu, scholar, jstor, researchgate, science.org
             if (sourceFlags.academic) {
                 operators.push('site:.edu OR site:scholar.google.com OR site:jstor.org OR site:arxiv.org OR site:researchgate.net OR site:science.org OR site:nature.com');
             }
-            
+
             // FINANCE: bloomberg, cnbc, wsj, ft, investopedia, yahoo finance
             if (sourceFlags.finance) {
                 operators.push('site:bloomberg.com OR site:cnbc.com OR site:finance.yahoo.com OR site:wsj.com OR site:ft.com OR site:investopedia.com OR site:marketwatch.com');
             }
-            
+
             // SOCIAL: reddit, twitter, quora, hacker news, linkedin, stackoverflow
             if (sourceFlags.social) {
                 operators.push('site:reddit.com OR site:twitter.com OR site:quora.com OR site:news.ycombinator.com OR site:linkedin.com OR site:stackoverflow.com');
             }
-            
+
             // If specific flags are set, append them.
             if (operators.length > 0) {
                 // We wrap operators in parens to ensure logical grouping
@@ -98,12 +98,16 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
 
         // 1. Use DuckDuckGo HTML endpoint
         const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(finalQuery)}`;
-        
-        // 2. Route through AllOrigins (CORS Proxy)
+
+        // 2. Route through AllOrigins (CORS Proxy) with timeout
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ddgUrl)}&t=${Date.now()}`;
-        
-        const response = await fetch(proxyUrl);
-        
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
             throw new Error(`Proxy returned ${response.status}`);
         }
@@ -118,13 +122,13 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
         // 3. Parse HTML
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
-        
+
         const results: SearchResult[] = [];
         const resultElements = doc.querySelectorAll('.result');
 
         resultElements.forEach((el, index) => {
             if (index >= 8) return; // Limit to top 8 results for better context
-            
+
             const titleEl = el.querySelector('.result__title a');
             const snippetEl = el.querySelector('.result__snippet');
             const urlEl = el.querySelector('.result__url');
@@ -163,6 +167,7 @@ export const performWebSearch = async (query: string, sourceFlags?: SourceFlags)
 
     } catch (error) {
         console.warn("Search API Error (using fallback):", error);
+        // Always return fallback results on any error (network, timeout, parsing, etc)
         return getFallbackResults(query);
     }
 };
