@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppState, Screen, UserProfile, WeatherData, ChatMessage, SearchSession, Project, Workspace, Attachment, SearchMode, SourceFlags } from './types';
 import { supabase, authService, db } from './services/supabase';
@@ -8,13 +7,14 @@ import Auth from './components/Auth';
 import Intro from './components/Intro';
 import Profile from './components/Profile';
 import SearchInterface from './components/SearchInterface';
-import ManageAccount from './components/ManageAccount'; 
+import SearchResults from './components/SearchResults';
+import ManageAccount from './components/ManageAccount';
 import Notifications from './components/Notifications';
 import Projects from './components/Projects';
 import WorkspaceManager from './components/Workspace';
-import StreekxAssistant from './components/StreekxAssistant'; 
+import StreekxAssistant from './components/StreekxAssistant';
 import Settings from './components/Settings';
-import History from './components/History'; 
+import History from './components/History';
 import { FeedbackScreen, DiscoveryScreen } from './components/FeatureScreens';
 
 const App: React.FC = () => {
@@ -33,9 +33,10 @@ const App: React.FC = () => {
   ]);
   
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null); 
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [initialQuery, setInitialQuery] = useState('');
-  
+  const [useSearchResultsView, setUseSearchResultsView] = useState(false);
+
   // Search Context State (Ephemeral for new session creation)
   const [initialAttachments, setInitialAttachments] = useState<Attachment[]>([]);
   const [initialMode, setInitialMode] = useState<SearchMode>('Standard');
@@ -228,10 +229,10 @@ const App: React.FC = () => {
 
   // --- DATA OPERATIONS (Wrapped to Sync with DB) ---
   const startSearch = (
-      query: string, 
-      attachments: Attachment[] = [], 
-      mode: SearchMode = 'Standard', 
-      isIncognito: boolean = false, 
+      query: string,
+      attachments: Attachment[] = [],
+      mode: SearchMode = 'Standard',
+      isIncognito: boolean = false,
       sourceFlags?: SourceFlags,
       projectContextId?: string
   ) => {
@@ -240,17 +241,18 @@ const App: React.FC = () => {
       id: newId,
       query,
       timestamp: Date.now(),
-      messages: [{ 
-          role: 'user', 
-          content: query, 
+      messages: [{
+          role: 'user',
+          content: query,
           timestamp: Date.now(),
           attachments: attachments
       }],
       projectId: projectContextId || activeProjectId || undefined,
       mode: mode,
-      sourceFlags: sourceFlags
+      sourceFlags: sourceFlags,
+      currentFilter: 'All'
     };
-    
+
     if (!isIncognito) {
         // Optimistic Update
         setSessions(prev => [newSession, ...prev]);
@@ -263,7 +265,9 @@ const App: React.FC = () => {
     setInitialMode(mode);
     setInitialSourceFlags(sourceFlags);
 
-    setScreen('SEARCH');
+    // Navigate to search results view for initial search
+    setUseSearchResultsView(true);
+    setScreen('SEARCH_RESULTS');
   };
 
   const updateSessionMessages = (sessionId: string, messages: ChatMessage[]) => {
@@ -277,6 +281,20 @@ const App: React.FC = () => {
         if (user && sess) db.saveSession(sess, user.id); // SYNC
         return updated;
     });
+  };
+
+  const updateSession = (sessionId: string, updates: Partial<SearchSession>) => {
+    setSessions(prev => {
+        const updated = prev.map(s => s.id === sessionId ? { ...s, ...updates } : s);
+        const sess = updated.find(s => s.id === sessionId);
+        if (user && sess) db.saveSession(sess, user.id); // SYNC
+        return updated;
+    });
+  };
+
+  const handleCreateThreadFromResults = (sessionId: string) => {
+    setUseSearchResultsView(false);
+    setScreen('SEARCH');
   };
 
   const deleteSession = (sessionId: string) => {
@@ -351,9 +369,21 @@ const App: React.FC = () => {
             }}
           />
         );
+      case 'SEARCH_RESULTS':
+        return (
+          <SearchResults
+            sessionId={currentSessionId!}
+            initialQuery={initialQuery}
+            initialSessions={sessions}
+            onBack={() => setScreen('HOME')}
+            onCreateThread={handleCreateThreadFromResults}
+            onUpdateSession={updateSession}
+            activeProject={projects.find(p => p.id === activeProjectId)}
+          />
+        );
       case 'SEARCH':
         return (
-          <SearchInterface 
+          <SearchInterface
             sessionId={currentSessionId!}
             initialSessions={sessions}
             onBack={() => activeProjectId ? setScreen('PROJECT_DETAIL') : setScreen('HOME')}

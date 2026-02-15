@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, SearchSession, Attachment, Project, SearchResult, SearchMode, SourceFlags } from '../types';
 import { generateSmartResponse } from '../services/gemini';
@@ -84,7 +83,7 @@ export default function SearchInterface({
             executeSearch(initialQuery, initialAttachments);
         }
     }
-  }, [initialQuery]);
+  }, []);
 
   const executeSearch = async (queryText: string, currentAttachments: Attachment[] = []) => {
     setIsStreaming(true);
@@ -92,32 +91,32 @@ export default function SearchInterface({
 
     // Create a placeholder AI message
     const aiMsgId = Date.now();
-    const aiMsg: ChatMessage = { 
-        role: 'model', 
-        content: '', 
+    const aiMsg: ChatMessage = {
+        role: 'model',
+        content: '',
         timestamp: aiMsgId,
-        sources: [] 
+        sources: []
     };
-    
+
     setMessages(prev => {
         const next = [...prev, aiMsg];
-        onUpdateMessages(sessionId, next);
         return next;
     });
 
     let accumulatedText = "";
+    const messagesSnapshot = [...messages, aiMsg];
 
     try {
         await generateSmartResponse(
-            queryText, 
-            messages.slice(0, -1), // Don't include the empty AI msg in history yet
+            queryText,
+            messagesSnapshot.slice(0, -1), // Don't include the empty AI msg in history yet
             (status) => setCurrentStatus(status),
             (sources) => {
                 // Update the message with sources immediately when found
                 setMessages(prev => {
                     const newMsgs = [...prev];
                     const lastMsg = newMsgs[newMsgs.length - 1];
-                    if (lastMsg.role === 'model') {
+                    if (lastMsg?.role === 'model') {
                         lastMsg.sources = sources;
                     }
                     return newMsgs;
@@ -129,7 +128,7 @@ export default function SearchInterface({
                 setMessages(prev => {
                     const newMsgs = [...prev];
                     const lastMsg = newMsgs[newMsgs.length - 1];
-                    if (lastMsg.role === 'model') {
+                    if (lastMsg?.role === 'model') {
                         lastMsg.content = accumulatedText;
                     }
                     return newMsgs;
@@ -140,18 +139,39 @@ export default function SearchInterface({
             sourceFlags, // Use current source flags
             currentAttachments // Pass images if any
         );
-    } catch (e) {
+    } catch (e: any) {
         console.error("Search failed", e);
+
+        // Handle specific error types with user-friendly messages
+        const errorMessage = e?.message || e?.toString() || '';
+        let userMessage = "I'm having trouble connecting right now. Please try again later.";
+
+        if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+            userMessage = "API quota exceeded. Please try again in a few moments.";
+        } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('network')) {
+            userMessage = "Network error. Please check your connection and try again.";
+        }
+
+        // Update the last message with error
+        setMessages(prev => {
+            const newMsgs = [...prev];
+            const lastMsg = newMsgs[newMsgs.length - 1];
+            if (lastMsg?.role === 'model') {
+                lastMsg.content = userMessage;
+            }
+            return newMsgs;
+        });
     } finally {
         setIsStreaming(false);
         setCurrentStatus(""); // Clear status
-        
-        // Final save to persist
-        setMessages(prev => {
-             const next = [...prev];
-             onUpdateMessages(sessionId, next);
-             return next;
-        });
+
+        // Final save to persist - defer to next render cycle
+        setTimeout(() => {
+            setMessages(prev => {
+                 onUpdateMessages(sessionId, prev);
+                 return prev;
+            });
+        }, 0);
     }
   };
 
@@ -159,21 +179,29 @@ export default function SearchInterface({
     if (e) e.preventDefault();
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
 
-    const userMsg: ChatMessage = { 
-        role: 'user', 
-        content: input, 
+    const userMsg: ChatMessage = {
+        role: 'user',
+        content: input,
         timestamp: Date.now(),
         attachments: attachments
     };
 
+    const txt = input;
+    const atts = [...attachments];
+
     setMessages(prev => {
         const next = [...prev, userMsg];
-        onUpdateMessages(sessionId, next);
         return next;
     });
 
-    const txt = input;
-    const atts = [...attachments];
+    // Defer persistence to next cycle
+    setTimeout(() => {
+        setMessages(prev => {
+            onUpdateMessages(sessionId, prev);
+            return prev;
+        });
+    }, 0);
+
     setInput('');
     setAttachments([]);
     executeSearch(txt, atts);

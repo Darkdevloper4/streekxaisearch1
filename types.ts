@@ -1,4 +1,3 @@
-
 // User & Profile
 export interface UserProfile {
   id: string;
@@ -14,6 +13,37 @@ export interface UserProfile {
   recovery_id?: string;
   two_step_enabled?: boolean;
   created_at: string;
+}
+
+export type NotificationType = 'info' | 'security' | 'otp' | 'prompt';
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data?: any;
+  read: boolean;
+  created_at: string;
+}
+
+export interface SecurityPreferences {
+  user_id: string;
+  skip_password: boolean;
+  safe_browsing: boolean;
+  updated_at: string;
+}
+
+export interface DeviceSession {
+  id: string;
+  user_id: string;
+  device_name: string;
+  platform: string;
+  user_agent: string;
+  last_seen_at: string;
+  created_at: string;
+  is_lost: boolean;
 }
 
 // Project / Workspace (Perplexity Collections Style)
@@ -41,6 +71,8 @@ export interface Workspace {
 // Search & AI
 export type SearchMode = 'Standard' | 'Pro' | 'Research' | 'Labs';
 
+export type SearchFilter = 'All' | 'Images' | 'Videos' | 'Maps' | 'Shopping';
+
 export interface SourceFlags {
     web: boolean;
     academic: boolean;
@@ -55,12 +87,22 @@ export interface Attachment {
   name: string;
 }
 
+export type SearchResultType = 'web' | 'image' | 'video' | 'map' | 'shopping';
+
 export interface SearchResult {
   title: string;
   url: string;
   snippet: string;
   favicon?: string;
   source: string;
+  type?: SearchResultType; // NEW: Type of result
+  imageUrl?: string; // For image/shopping results
+  thumbnailUrl?: string; // For video/image results
+  videoUrl?: string; // For video results
+  coordinates?: { lat: number; lng: number }; // For map results
+  price?: string; // For shopping results
+  rating?: number; // For shopping/map results
+  reviews?: number; // For shopping/map results
 }
 
 export interface ChatMessage {
@@ -80,6 +122,8 @@ export interface SearchSession {
   projectId?: string; // Link to a project context
   mode?: SearchMode; // Store which mode was used
   sourceFlags?: SourceFlags;
+  allResults?: SearchResult[]; // NEW: All search results from search
+  currentFilter?: SearchFilter; // NEW: Currently applied filter
 }
 
 // Weather
@@ -90,13 +134,14 @@ export interface WeatherData {
 }
 
 // App State
-export type Screen = 
-  | 'INTRO' 
-  | 'AUTH' 
-  | 'HOME' 
-  | 'SEARCH' 
+export type Screen =
+  | 'INTRO'
+  | 'AUTH'
+  | 'HOME'
+  | 'SEARCH'
+  | 'SEARCH_RESULTS' // NEW: Google-like results view before creating thread
   | 'ASSISTANT'
-  | 'PROFILE' 
+  | 'PROFILE'
   | 'EDIT_PROFILE'
   | 'SETTINGS'
   | 'ACCOUNT'
